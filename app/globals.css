@@ -1,0 +1,23 @@
+@import url('https://fonts.googleapis.com/css2?family=Cairo:wght@300;400;600;700;900&family=Inter:wght@300;400;500;600;700&display=swap');
+@import "tailwindcss";
+
+:root {
+  --blue: #1a3c6e;
+  --blue-dark: #0d2447;
+  --gold: #c9a84c;
+  --gold-lt: #f0d980;
+  --white: #ffffff;
+  --off: #f8f9fb;
+  --border: #e8eaed;
+  --text: #111827;
+  --muted: #6b7280;
+  --background: #ffffff;
+  --foreground: #111827;
+}
+
+body {
+  background: var(--background);
+  color: var(--foreground);
+  font-family: 'Cairo', sans-serif;
+  overflow-x: hidden;
+}
