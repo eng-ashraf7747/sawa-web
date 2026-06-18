@@ -12,11 +12,6 @@ import {
   doc,
   setDoc,
   getDoc,
-  getDocs,
-  collection,
-  query,
-  where,
-  limit,
   serverTimestamp,
 } from "firebase/firestore";
 import { auth, db } from "./firebase";
@@ -35,17 +30,6 @@ const generateReferralCode = (uid: string): string => {
     seed = Math.floor(seed / chars.length) || seed * 31 + i;
   }
   return code;
-};
-
-// ─── التحقق من تكرار رقم الهاتف ──────────────────────────────
-const checkPhoneExists = async (phone: string): Promise<boolean> => {
-  const q = query(
-    collection(db, "users"),
-    where("phone", "==", phone),
-    limit(1)
-  );
-  const snapshot = await getDocs(q);
-  return !snapshot.empty;
 };
 
 // ─── حفظ بيانات المستخدم في Firestore ────────────────────────
@@ -93,12 +77,6 @@ export const registerWithEmail = async (
   phone: string,
   referralCode?: string
 ) => {
-  // التحقق من تكرار رقم الهاتف
-  const phoneExists = await checkPhoneExists(phone);
-  if (phoneExists) {
-    throw { code: "phone-already-in-use" };
-  }
-
   const credential = await createUserWithEmailAndPassword(
     auth,
     email,

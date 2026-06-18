@@ -114,8 +114,7 @@ export default function RegisterForm({ onSuccess, onSwitchToLogin }: RegisterFor
         setErrors(prev => ({ ...prev, password: "كلمة المرور ضعيفة — 8 أحرف على الأقل" }));
       } else if (e.code === "auth/invalid-email") {
         setErrors(prev => ({ ...prev, email: "البريد الإلكتروني غير صالح" }));
-      } else if (e.code === "phone-already-in-use") {
-        setErrors(prev => ({ ...prev, phone: "رقم الهاتف مستخدم بالفعل" }));
+      
       } else {
         setErrors(prev => ({ ...prev, general: "حصل خطأ — حاول تاني" }));
       }
