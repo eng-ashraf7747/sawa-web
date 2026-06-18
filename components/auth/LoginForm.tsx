@@ -1,6 +1,9 @@
 "use client";
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import { loginWithEmail, loginWithGoogle } from "@/lib/auth";
+import { mapAuthError } from "@/lib/authErrors";
+import { isValidEmail } from "@/lib/validations";
 
 interface LoginFormProps {
   onSuccess: () => void;
@@ -9,6 +12,7 @@ interface LoginFormProps {
 }
 
 export default function LoginForm({ onSuccess, onSwitchToRegister, onForgotPassword }: LoginFormProps) {
+  const router = useRouter();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
@@ -16,20 +20,16 @@ export default function LoginForm({ onSuccess, onSwitchToRegister, onForgotPassw
 
   const handleLogin = async () => {
     if (!email.trim()) { setError("البريد الإلكتروني مطلوب"); return; }
+    if (!isValidEmail(email)) { setError("بريد إلكتروني غير صالح"); return; }
     if (!password) { setError("كلمة المرور مطلوبة"); return; }
     setLoading(true);
     setError("");
     try {
       await loginWithEmail(email, password);
-      window.location.href = "/dashboard";
+      router.push("/dashboard");
     } catch (err: unknown) {
       const e = err as { code?: string };
-      if (e.code === "auth/user-not-found") setError("الحساب غير موجود");
-      else if (e.code === "auth/wrong-password") setError("كلمة المرور غلط");
-      else if (e.code === "auth/invalid-credential") setError("البريد الإلكتروني أو كلمة المرور غير صحيحة");
-      else if (e.code === "auth/invalid-email") setError("البريد الإلكتروني غير صالح");
-      else if (e.code === "auth/too-many-requests") setError("تم تجاوز عدد المحاولات — حاول بعد قليل");
-      else setError("حصل خطأ — حاول تاني");
+      setError(mapAuthError(e.code ?? ""));
     } finally {
       setLoading(false);
     }
@@ -40,9 +40,10 @@ export default function LoginForm({ onSuccess, onSwitchToRegister, onForgotPassw
     setError("");
     try {
       await loginWithGoogle();
-      window.location.href = "/dashboard";
-    } catch {
-      setError("حصل خطأ في تسجيل الدخول بـ Google");
+      router.push("/dashboard");
+    } catch (err: unknown) {
+      const e = err as { code?: string };
+      setError(mapAuthError(e.code ?? "auth/popup-closed-by-user"));
     } finally {
       setLoading(false);
     }

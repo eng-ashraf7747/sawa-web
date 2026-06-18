@@ -10,31 +10,48 @@ interface UseUserReturn {
   userData: User | null;
   loading: boolean;
   isAuthenticated: boolean;
+  error: string | null;
 }
 
 export const useUser = (): UseUserReturn => {
   const [firebaseUser, setFirebaseUser] = useState<FirebaseUser | null>(null);
   const [userData, setUserData] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     const unsubscribeAuth = onAuthStateChanged(auth, (user) => {
       setFirebaseUser(user);
+      setError(null);
 
       if (user) {
-        // الاشتراك في بيانات المستخدم من Firestore
         const userRef = doc(db, "users", user.uid);
-        const unsubscribeFirestore = onSnapshot(userRef, (snapshot) => {
-          if (snapshot.exists()) {
-            setUserData(snapshot.data() as User);
+        const unsubscribeFirestore = onSnapshot(
+          userRef,
+          (snapshot) => {
+            if (snapshot.exists()) {
+              setUserData(snapshot.data() as User);
+            } else {
+              setUserData(null);
+            }
+            setLoading(false);
+          },
+          (err) => {
+            console.error("Firestore error:", err);
+            setError("حدث خطأ في تحميل البيانات");
+            setLoading(false);
           }
-          setLoading(false);
-        });
+        );
         return () => unsubscribeFirestore();
       } else {
         setUserData(null);
         setLoading(false);
       }
+    },
+    (err) => {
+      console.error("Auth error:", err);
+      setError("حدث خطأ في المصادقة");
+      setLoading(false);
     });
 
     return () => unsubscribeAuth();
@@ -45,5 +62,6 @@ export const useUser = (): UseUserReturn => {
     userData,
     loading,
     isAuthenticated: !!firebaseUser,
+    error,
   };
 };

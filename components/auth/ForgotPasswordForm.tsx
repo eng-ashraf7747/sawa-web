@@ -1,6 +1,8 @@
 "use client";
 import { useState } from "react";
 import { forgotPassword } from "@/lib/auth";
+import { mapAuthError } from "@/lib/authErrors";
+import { isValidEmail } from "@/lib/validations";
 
 interface ForgotPasswordFormProps {
   onBack: () => void;
@@ -14,6 +16,7 @@ export default function ForgotPasswordForm({ onBack }: ForgotPasswordFormProps) 
 
   const handleSubmit = async () => {
     if (!email.trim()) { setError("البريد الإلكتروني مطلوب"); return; }
+    if (!isValidEmail(email)) { setError("بريد إلكتروني غير صالح"); return; }
     setLoading(true);
     setError("");
     try {
@@ -21,8 +24,7 @@ export default function ForgotPasswordForm({ onBack }: ForgotPasswordFormProps) 
       setSent(true);
     } catch (err: unknown) {
       const e = err as { code?: string };
-      if (e.code === "auth/invalid-email") setError("البريد الإلكتروني غير صالح");
-      else setError("حصل خطأ — حاول تاني");
+      setError(mapAuthError(e.code ?? ""));
     } finally {
       setLoading(false);
     }
