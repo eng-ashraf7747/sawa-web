@@ -26,7 +26,8 @@ export default function LoginForm({ onSuccess, onSwitchToRegister, onForgotPassw
     setError("");
     try {
       await loginWithEmail(email, password);
-      router.push("/dashboard");
+      window.location.href = "/dashboard";
+
     } catch (err: unknown) {
       const e = err as { code?: string };
       setError(mapAuthError(e.code ?? ""));
@@ -40,7 +41,8 @@ export default function LoginForm({ onSuccess, onSwitchToRegister, onForgotPassw
     setError("");
     try {
       await loginWithGoogle();
-      router.push("/dashboard");
+      window.location.href = "/dashboard";
+
     } catch (err: unknown) {
       const e = err as { code?: string };
       setError(mapAuthError(e.code ?? "auth/popup-closed-by-user"));
