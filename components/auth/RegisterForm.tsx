@@ -55,7 +55,6 @@ export default function RegisterForm({ onSuccess, onSwitchToLogin }: RegisterFor
   const [referralCode, setReferralCode] = useState("");
   const [loading, setLoading] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
-  const [emailSent, setEmailSent] = useState(false);
 
   // ─── Field-level validation ──────────────────────────────────
   const validateField = (name: string, value: string): string => {
@@ -92,7 +91,6 @@ export default function RegisterForm({ onSuccess, onSwitchToLogin }: RegisterFor
   };
 
   const handleRegister = async () => {
-    // تحقق من كل الحقول
     const newErrors: Record<string, string> = {
       displayName: validateField("displayName", displayName),
       phone: validateField("phone", phone),
@@ -108,7 +106,6 @@ export default function RegisterForm({ onSuccess, onSwitchToLogin }: RegisterFor
     try {
       await registerWithEmail(email, password, displayName, phone, referralCode || undefined);
       window.location.href = "/verify-email";
-
     } catch (err: unknown) {
       const e = err as { code?: string };
       if (e.code === "auth/email-already-in-use") {
@@ -117,6 +114,8 @@ export default function RegisterForm({ onSuccess, onSwitchToLogin }: RegisterFor
         setErrors(prev => ({ ...prev, password: "كلمة المرور ضعيفة — 8 أحرف على الأقل" }));
       } else if (e.code === "auth/invalid-email") {
         setErrors(prev => ({ ...prev, email: "البريد الإلكتروني غير صالح" }));
+      } else if (e.code === "phone-already-in-use") {
+        setErrors(prev => ({ ...prev, phone: "رقم الهاتف مستخدم بالفعل" }));
       } else {
         setErrors(prev => ({ ...prev, general: "حصل خطأ — حاول تاني" }));
       }
@@ -130,7 +129,7 @@ export default function RegisterForm({ onSuccess, onSwitchToLogin }: RegisterFor
     setErrors({});
     try {
       await loginWithGoogle();
-      onSuccess();
+      window.location.href = "/dashboard";
     } catch {
       setErrors({ general: "حصل خطأ في تسجيل الدخول بـ Google" });
     } finally {
@@ -140,23 +139,6 @@ export default function RegisterForm({ onSuccess, onSwitchToLogin }: RegisterFor
 
   const strength = getPasswordStrength(password);
   const strengthData = strengthConfig[strength];
-
-  // ─── Email Sent State ─────────────────────────────────────────
-  if (emailSent) {
-    return (
-      <div className="text-center py-4">
-        <div className="text-4xl mb-4">📧</div>
-        <h2 className="text-xl font-extrabold text-[#0d2447] mb-2">تحقق من بريدك</h2>
-        <p className="text-sm text-[#6b7280] mb-2">تم إرسال رابط التحقق إلى:</p>
-        <p className="text-sm font-bold text-[#1a3c6e] mb-4">{email}</p>
-        <p className="text-xs text-[#6b7280] mb-6">افتح بريدك واضغط على الرابط للتحقق من حسابك.</p>
-        <button onClick={onSuccess}
-          className="w-full py-3 bg-[#1a3c6e] text-white rounded-xl font-bold text-sm hover:bg-[#0d2447] transition-colors cursor-pointer">
-          حسناً، سأتحقق الآن
-        </button>
-      </div>
-    );
-  }
 
   return (
     <div>
