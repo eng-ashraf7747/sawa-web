@@ -40,7 +40,8 @@ export default function Hero({ onRegisterClick }: HeroProps) {
       <div className="flex justify-center">
         <div className="w-full max-w-[500px]">
           <Image
-            src="/Sawa-paner.png"
+            src="/Sawa-banner.png"
+
             alt="SAWA Characters"
             width={500}
             height={400}
