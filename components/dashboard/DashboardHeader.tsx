@@ -31,7 +31,7 @@ export default function DashboardHeader({ userData, activePage }: DashboardHeade
       <div className="flex-1 flex justify-center items-end translate-y-2">
 
         <Image
-          src="/sawa-paner.png"
+          src="/Sawa-paner.png"
           alt="سوا معاً"
           height={90}
           width={200}
