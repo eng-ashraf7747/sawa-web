@@ -32,7 +32,8 @@ export default function VerifyEmailPage() {
               emailVerified: true,
               updatedAt: serverTimestamp(),
             });
-            router.push("/dashboard");
+            window.location.href = "/dashboard";
+
           }
         } catch (_) {}
       }, 2000);
