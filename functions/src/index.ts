@@ -2,4 +2,4 @@ import {initializeApp} from "firebase-admin/app";
 
 initializeApp();
 
-export {};
+export {onUserRegistered} from "./auth/onUserRegistered";
