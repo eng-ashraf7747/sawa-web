@@ -46,6 +46,8 @@ export default function RegisterForm({ onSuccess, onSwitchToLogin }: RegisterFor
     try {
       await registerWithEmail(email, password, displayName, phone, referralCode || undefined);
       router.push("/verify-email");
+      router.refresh();
+
     } catch (err: unknown) {
       const e = err as { code?: string };
       const { field, message } = getFieldError(e.code ?? "");
@@ -61,6 +63,8 @@ export default function RegisterForm({ onSuccess, onSwitchToLogin }: RegisterFor
     try {
       await loginWithGoogle();
       router.push("/dashboard");
+      router.refresh();
+
     } catch (err: unknown) {
       const e = err as { code?: string };
       setErrors({ general: mapAuthError(e.code ?? "") });
