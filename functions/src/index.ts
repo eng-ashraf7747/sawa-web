@@ -5,3 +5,4 @@ initializeApp();
 export {onUserRegistered} from "./auth/onUserRegistered";
 export {onFirstLogin} from "./auth/onFirstLogin";
 export {onReferralRequest} from "./auth/onReferralRequest";
+export {onAdminApprove} from "./auth/onAdminApprove";
