@@ -1,0 +1,2156 @@
+﻿
+================================================
+FILE: app\(main)\page.tsx
+================================================
+"use client";
+import { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
+import { AuthMode } from "@/types";
+import Navbar from "@/components/layout/Navbar";
+import Footer from "@/components/layout/Footer";
+import Hero from "@/components/home/Hero";
+import ComingSoon from "@/components/home/ComingSoon";
+import Tagline from "@/components/home/Tagline";
+import AuthModal from "@/components/auth/AuthModal";
+import { useUser } from "@/hooks/useUser";
+
+export default function Home() {
+  const router = useRouter();
+  const { isAuthenticated, loading } = useUser();
+  const [authOpen, setAuthOpen] = useState(false);
+  const [authMode, setAuthMode] = useState<AuthMode>("login");
+
+  useEffect(() => {
+    if (!loading && isAuthenticated) {
+      router.push("/dashboard");
+    }
+  }, [loading, isAuthenticated, router]);
+
+  const openLogin = () => { setAuthMode("login"); setAuthOpen(true); };
+  const openRegister = () => { setAuthMode("register"); setAuthOpen(true); };
+
+  if (loading) return null;
+  if (isAuthenticated) return null;
+
+  return (
+    <div dir="rtl" className="min-h-screen bg-white text-[#111827] overflow-x-hidden">
+      <Navbar onLoginClick={openLogin} />
+      <Hero onRegisterClick={openRegister} />
+      <ComingSoon />
+      <Tagline />
+      <Footer />
+      <AuthModal
+        isOpen={authOpen}
+        initialMode={authMode}
+        onClose={() => setAuthOpen(false)}
+      />
+    </div>
+  );
+}
+
+================================================
+FILE: app\dashboard\page.tsx
+================================================
+"use client";
+import { useEffect } from "react";
+import { useRouter } from "next/navigation";
+import { useUser } from "@/hooks/useUser";
+import DashboardLayout from "@/components/dashboard/DashboardLayout";
+
+export default function DashboardPage() {
+  const { loading, isAuthenticated } = useUser();
+  const router = useRouter();
+
+  useEffect(() => {
+    if (!loading && !isAuthenticated) {
+      router.push("/");
+    }
+  }, [loading, isAuthenticated, router]);
+
+  if (loading) return (
+    <div className="min-h-screen flex items-center justify-center bg-[#f0f4f8]">
+      <div className="w-12 h-12 border-4 border-[#1a3c6e] border-t-[#c9a84c] rounded-full animate-spin" />
+    </div>
+  );
+
+  if (!isAuthenticated) return null;
+
+  return <DashboardLayout />;
+}
+
+================================================
+FILE: app\verify-email\page.tsx
+================================================
+"use client";
+import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
+import { auth, db } from "@/lib/firebase";
+import {
+  onAuthStateChanged,
+  reload,
+  sendEmailVerification,
+  signOut,
+} from "firebase/auth";
+import { doc, updateDoc, serverTimestamp } from "firebase/firestore";
+
+export default function VerifyEmailPage() {
+  const router = useRouter();
+  const [checking, setChecking] = useState(true);
+  const [resending, setResending] = useState(false);
+  const [resendCooldown, setResendCooldown] = useState(0);
+  const [email, setEmail] = useState("");
+
+  useEffect(() => {
+    const unsubscribe = onAuthStateChanged(auth, (user) => {
+      if (!user) { router.push("/"); return; }
+      setEmail(user.email ?? "");
+
+      const interval = setInterval(async () => {
+        try {
+          await reload(user);
+          const refreshed = auth.currentUser;
+          if (refreshed?.emailVerified) {
+            clearInterval(interval);
+            await updateDoc(doc(db, "users", refreshed.uid), {
+              emailVerified: true,
+              updatedAt: serverTimestamp(),
+            });
+            window.location.href = "/dashboard";
+
+          }
+        } catch (_) {}
+      }, 2000);
+
+      setChecking(false);
+      return () => clearInterval(interval);
+    });
+
+    return () => unsubscribe();
+  }, [router]);
+
+  const handleResend = async () => {
+    if (resendCooldown > 0) return;
+    setResending(true);
+    try {
+      const user = auth.currentUser;
+      if (user) {
+        await sendEmailVerification(user);
+        setResendCooldown(60);
+        const timer = setInterval(() => {
+          setResendCooldown(prev => {
+            if (prev <= 1) { clearInterval(timer); return 0; }
+            return prev - 1;
+          });
+        }, 1000);
+      }
+    } catch (_) {}
+    finally { setResending(false); }
+  };
+
+  const handleLogout = async () => {
+    await signOut(auth);
+    router.push("/");
+  };
+
+  if (checking) return null;
+
+  return (
+    <div className="min-h-screen bg-[#f0f4f8] flex items-center justify-center p-4" dir="rtl">
+      <div className="bg-white rounded-2xl p-8 w-full max-w-md shadow-lg text-center">
+        <div className="w-20 h-20 rounded-full bg-[#f0f4f8] flex items-center justify-center text-4xl mx-auto mb-6"
+          style={{ border: "2px solid #c9a84c" }}>
+          📧
+        </div>
+
+        <h2 className="text-2xl font-extrabold text-[#0d2447] mb-2">
+          تحقق من بريدك الإلكتروني
+        </h2>
+
+        <p className="text-sm text-[#6b7280] mb-1">تم إرسال رابط التحقق إلى:</p>
+        <p className="text-sm font-bold text-[#1a3c6e] mb-4">{email}</p>
+
+        <p className="text-xs text-[#6b7280] mb-6">
+          افتح بريدك الإلكتروني واضغط على الرابط للتحقق من حسابك.
+        </p>
+
+        <div className="flex items-center justify-center gap-2 mb-8">
+          <div className="w-4 h-4 border-2 border-[#1a3c6e] border-t-[#c9a84c] rounded-full animate-spin" />
+          <span className="text-sm text-[#6b7280]">في انتظار التحقق...</span>
+        </div>
+
+        <button
+          onClick={handleResend}
+          disabled={resendCooldown > 0 || resending}
+          className="w-full py-3 border-2 border-[#1a3c6e] text-[#1a3c6e] rounded-xl font-bold text-sm hover:bg-[#1a3c6e] hover:text-white transition-all cursor-pointer disabled:opacity-50 mb-3"
+        >
+          {resending ? "جاري الإرسال..." : resendCooldown > 0 ? `إعادة الإرسال (${resendCooldown}s)` : "إعادة إرسال رابط التحقق"}
+        </button>
+
+        <button
+          onClick={handleLogout}
+          className="w-full py-2.5 text-[#6b7280] text-sm hover:text-[#1a3c6e] transition-colors cursor-pointer"
+        >
+          تسجيل الخروج والعودة للدخول
+        </button>
+      </div>
+    </div>
+  );
+}
+
+================================================
+FILE: app\layout.tsx
+================================================
+import type { Metadata } from "next";
+import { Cairo } from "next/font/google";
+import { Analytics } from "@vercel/analytics/next";
+import ErrorBoundary from "@/components/ErrorBoundary";
+import "./globals.css";
+
+const cairo = Cairo({
+  variable: "--font-cairo",
+  subsets: ["arabic", "latin"],
+  weight: ["400", "600", "700", "800"],
+});
+
+export const metadata: Metadata = {
+  title: "سوا — معاً ندفع أقل",
+  description: "منصة المفاوضة الجماعية — انضم لآلاف الأعضاء وادفع أقل",
+};
+
+export default function RootLayout({
+  children,
+}: Readonly<{
+  children: React.ReactNode;
+}>) {
+  return (
+    <html lang="ar" dir="rtl" className={`${cairo.variable} h-full antialiased`}>
+      <body className="min-h-full flex flex-col font-[family-name:var(--font-cairo)]">
+        <ErrorBoundary>
+          {children}
+        </ErrorBoundary>
+        <Analytics />
+      </body>
+    </html>
+  );
+}
+
+================================================
+FILE: components\auth\AuthModal.tsx
+================================================
+"use client";
+import { useState, useEffect } from "react";
+import { AuthMode } from "@/types";
+import LoginForm from "./LoginForm";
+import RegisterForm from "./RegisterForm";
+import ForgotPasswordForm from "./ForgotPasswordForm";
+
+interface AuthModalProps {
+  isOpen: boolean;
+  initialMode?: AuthMode;
+  onClose: () => void;
+}
+
+export default function AuthModal({ isOpen, initialMode = "login", onClose }: AuthModalProps) {
+  const [mode, setMode] = useState<AuthMode>(initialMode);
+
+  useEffect(() => {
+    setMode(initialMode);
+  }, [initialMode]);
+
+  if (!isOpen) return null;
+
+  return (
+    <div
+      className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4"
+      onClick={onClose}
+    >
+      <div
+        className="bg-white rounded-2xl p-8 w-full max-w-sm shadow-2xl relative"
+        onClick={e => e.stopPropagation()}
+      >
+        <button
+          onClick={onClose}
+          className="absolute top-3.5 left-3.5 w-7 h-7 rounded-full bg-[#f8f9fb] flex items-center justify-center text-[#6b7280] hover:bg-[#e8eaed] transition-colors cursor-pointer text-sm"
+        >
+          ✕
+        </button>
+
+        {mode === "login" && (
+          <LoginForm
+            onSuccess={onClose}
+            onSwitchToRegister={() => setMode("register")}
+            onForgotPassword={() => setMode("forgotPassword")}
+          />
+        )}
+        {mode === "register" && (
+          <RegisterForm
+            onSuccess={onClose}
+            onSwitchToLogin={() => setMode("login")}
+          />
+        )}
+        {mode === "forgotPassword" && (
+          <ForgotPasswordForm
+            onBack={() => setMode("login")}
+          />
+        )}
+      </div>
+    </div>
+  );
+}
+
+================================================
+FILE: components\auth\ForgotPasswordForm.tsx
+================================================
+"use client";
+import { useState } from "react";
+import { forgotPassword } from "@/lib/auth";
+import { mapAuthError } from "@/lib/authErrors";
+import { isValidEmail } from "@/lib/validations";
+
+interface ForgotPasswordFormProps {
+  onBack: () => void;
+}
+
+export default function ForgotPasswordForm({ onBack }: ForgotPasswordFormProps) {
+  const [email, setEmail] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
+  const [sent, setSent] = useState(false);
+
+  const handleSubmit = async () => {
+    if (!email.trim()) { setError("البريد الإلكتروني مطلوب"); return; }
+    if (!isValidEmail(email)) { setError("بريد إلكتروني غير صالح"); return; }
+    setLoading(true);
+    setError("");
+    try {
+      await forgotPassword(email);
+      setSent(true);
+    } catch (err: unknown) {
+      const e = err as { code?: string };
+      setError(mapAuthError(e.code ?? ""));
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  if (sent) {
+    return (
+      <div className="text-center py-4">
+        <div className="text-4xl mb-4">📧</div>
+        <h2 className="text-xl font-extrabold text-[#0d2447] mb-2">تم الإرسال</h2>
+        <p className="text-sm text-[#6b7280] mb-6">
+          إذا كان البريد الإلكتروني مسجلاً لدينا، ستصلك رسالة إعادة تعيين كلمة المرور خلال دقائق.
+        </p>
+        <button onClick={onBack}
+          className="w-full py-3 bg-[#1a3c6e] text-white rounded-xl font-bold text-sm hover:bg-[#0d2447] transition-colors cursor-pointer">
+          العودة لتسجيل الدخول
+        </button>
+      </div>
+    );
+  }
+
+  return (
+    <div>
+      <button onClick={onBack}
+        className="flex items-center gap-1 text-xs text-[#6b7280] hover:text-[#1a3c6e] mb-4 cursor-pointer">
+        ← العودة
+      </button>
+      <h2 className="text-xl font-extrabold text-[#0d2447] text-center mb-1">نسيت كلمة المرور؟</h2>
+      <p className="text-xs text-[#6b7280] text-center mb-6">أدخل بريدك وسنرسل لك رابط إعادة التعيين</p>
+
+      <input type="email" placeholder="البريد الإلكتروني" value={email}
+        onChange={e => setEmail(e.target.value)} dir="rtl"
+        className="w-full px-4 py-3 border-2 border-[#e8eaed] rounded-xl text-sm mb-4 focus:border-[#1a3c6e] outline-none transition-colors" />
+
+      {error && <p className="text-red-500 text-xs text-center mb-3">{error}</p>}
+
+      <button onClick={handleSubmit} disabled={loading}
+        className="w-full py-3.5 bg-[#1a3c6e] text-white rounded-xl font-bold text-sm hover:bg-[#0d2447] transition-colors cursor-pointer disabled:opacity-50">
+        {loading ? "جاري..." : "إرسال رابط إعادة التعيين"}
+      </button>
+    </div>
+  );
+}
+
+================================================
+FILE: components\auth\LoginForm.tsx
+================================================
+"use client";
+import { useState } from "react";
+import { useRouter } from "next/navigation";
+import { loginWithEmail, loginWithGoogle } from "@/lib/auth";
+import { mapAuthError } from "@/lib/authErrors";
+import { isValidEmail } from "@/lib/validations";
+
+interface LoginFormProps {
+  onSuccess: () => void;
+  onSwitchToRegister: () => void;
+  onForgotPassword: () => void;
+}
+
+export default function LoginForm({ onSuccess, onSwitchToRegister, onForgotPassword }: LoginFormProps) {
+  const router = useRouter();
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
+
+  const handleLogin = async () => {
+    if (!email.trim()) { setError("البريد الإلكتروني مطلوب"); return; }
+    if (!isValidEmail(email)) { setError("بريد إلكتروني غير صالح"); return; }
+    if (!password) { setError("كلمة المرور مطلوبة"); return; }
+    setLoading(true);
+    setError("");
+    try {
+      await loginWithEmail(email, password);
+      window.location.href = "/dashboard";
+
+    } catch (err: unknown) {
+      const e = err as { code?: string };
+      setError(mapAuthError(e.code ?? ""));
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleGoogle = async () => {
+    setLoading(true);
+    setError("");
+    try {
+      await loginWithGoogle();
+      window.location.href = "/dashboard";
+
+    } catch (err: unknown) {
+      const e = err as { code?: string };
+      setError(mapAuthError(e.code ?? "auth/popup-closed-by-user"));
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <div>
+      <h2 className="text-xl font-extrabold text-[#0d2447] text-center mb-1">مرحباً بك في سوا</h2>
+      <p className="text-xs text-[#6b7280] text-center mb-6">سجل دخولك للمتابعة</p>
+
+      <button onClick={handleGoogle} disabled={loading}
+        className="w-full flex items-center justify-center gap-2 py-3 border-2 border-[#e8eaed] rounded-xl text-sm font-semibold hover:border-[#1a3c6e] hover:bg-[#f8f9fb] transition-all cursor-pointer mb-4 disabled:opacity-50">
+        🇬 الدخول بجوجل
+      </button>
+
+      <div className="flex items-center gap-3 mb-4">
+        <div className="flex-1 h-px bg-[#e8eaed]" />
+        <span className="text-xs text-[#6b7280]">أو بالإيميل</span>
+        <div className="flex-1 h-px bg-[#e8eaed]" />
+      </div>
+
+      <input type="email" placeholder="البريد الإلكتروني" value={email}
+        onChange={e => setEmail(e.target.value)} dir="rtl"
+        className="w-full px-4 py-3 border-2 border-[#e8eaed] rounded-xl text-sm mb-3 focus:border-[#1a3c6e] outline-none transition-colors" />
+
+      <input type="password" placeholder="كلمة المرور" value={password}
+        onChange={e => setPassword(e.target.value)} dir="rtl"
+        className="w-full px-4 py-3 border-2 border-[#e8eaed] rounded-xl text-sm mb-2 focus:border-[#1a3c6e] outline-none transition-colors" />
+
+      <div className="text-left mb-4">
+        <button onClick={onForgotPassword}
+          className="text-xs text-[#1a3c6e] hover:underline cursor-pointer">
+          نسيت كلمة المرور؟
+        </button>
+      </div>
+
+      {error && <p className="text-red-500 text-xs text-center mb-3">{error}</p>}
+
+      <button onClick={handleLogin} disabled={loading}
+        className="w-full py-3.5 bg-[#1a3c6e] text-white rounded-xl font-bold text-sm hover:bg-[#0d2447] transition-colors cursor-pointer disabled:opacity-50">
+        {loading ? "جاري..." : "تسجيل الدخول"}
+      </button>
+
+      <div className="text-center mt-4 text-xs text-[#6b7280]">
+        مش عندك حساب؟{" "}
+        <button onClick={onSwitchToRegister} className="text-[#1a3c6e] font-semibold hover:underline cursor-pointer">
+          سجل دلوقتي
+        </button>
+      </div>
+    </div>
+  );
+}
+
+================================================
+FILE: components\auth\RegisterForm.tsx
+================================================
+"use client";
+import { useState } from "react";
+import { useRouter } from "next/navigation";
+import { registerWithEmail, loginWithGoogle } from "@/lib/auth";
+import { getFieldError, mapAuthError } from "@/lib/authErrors";
+import {
+  validateRegisterField,
+  getPasswordStrength,
+  strengthConfig,
+} from "@/lib/validations";
+
+interface RegisterFormProps {
+  onSuccess: () => void;
+  onSwitchToLogin: () => void;
+}
+
+export default function RegisterForm({ onSuccess, onSwitchToLogin }: RegisterFormProps) {
+  const router = useRouter();
+  const [displayName, setDisplayName] = useState("");
+  const [phone, setPhone] = useState("");
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [referralCode, setReferralCode] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [errors, setErrors] = useState<Record<string, string>>({});
+
+  const handleBlur = (name: string, value: string) => {
+    const error = validateRegisterField(name, value, password);
+    setErrors(prev => ({ ...prev, [name]: error }));
+  };
+
+  const handleRegister = async () => {
+    const newErrors: Record<string, string> = {
+      displayName: validateRegisterField("displayName", displayName),
+      phone: validateRegisterField("phone", phone),
+      email: validateRegisterField("email", email),
+      password: validateRegisterField("password", password),
+      confirmPassword: validateRegisterField("confirmPassword", confirmPassword, password),
+      referralCode: validateRegisterField("referralCode", referralCode),
+    };
+    setErrors(newErrors);
+    if (Object.values(newErrors).some(e => e !== "")) return;
+
+    setLoading(true);
+    try {
+      await registerWithEmail(email, password, displayName, phone, referralCode || undefined);
+      router.push("/verify-email");
+    } catch (err: unknown) {
+      const e = err as { code?: string };
+      const { field, message } = getFieldError(e.code ?? "");
+      setErrors(prev => ({ ...prev, [field]: message }));
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleGoogle = async () => {
+    setLoading(true);
+    setErrors({});
+    try {
+      await loginWithGoogle();
+      router.push("/dashboard");
+    } catch (err: unknown) {
+      const e = err as { code?: string };
+      setErrors({ general: mapAuthError(e.code ?? "") });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const strength = getPasswordStrength(password);
+  const strengthData = strengthConfig[strength];
+
+  return (
+    <div>
+      <h2 className="text-xl font-extrabold text-[#0d2447] text-center mb-1">إنشاء حساب جديد</h2>
+      <p className="text-xs text-[#6b7280] text-center mb-4">سجل وانضم لآلاف الأعضاء</p>
+
+      {/* Google */}
+      <button onClick={handleGoogle} disabled={loading}
+        className="w-full flex items-center justify-center gap-2 py-3 border-2 border-[#e8eaed] rounded-xl text-sm font-semibold hover:border-[#1a3c6e] hover:bg-[#f8f9fb] transition-all cursor-pointer mb-4 disabled:opacity-50">
+        🇬 الدخول بجوجل
+      </button>
+
+      <div className="flex items-center gap-3 mb-4">
+        <div className="flex-1 h-px bg-[#e8eaed]" />
+        <span className="text-xs text-[#6b7280]">أو بالإيميل</span>
+        <div className="flex-1 h-px bg-[#e8eaed]" />
+      </div>
+
+      {/* الاسم */}
+      <div className="mb-3">
+        <input type="text" placeholder="الاسم الكامل" value={displayName}
+          onChange={e => setDisplayName(e.target.value)}
+          onBlur={e => handleBlur("displayName", e.target.value)}
+          dir="rtl"
+          className={`w-full px-4 py-3 border-2 rounded-xl text-sm focus:outline-none transition-colors ${errors.displayName ? "border-red-400" : "border-[#e8eaed] focus:border-[#1a3c6e]"}`} />
+        {errors.displayName && <p className="text-red-500 text-xs mt-1 text-right">{errors.displayName}</p>}
+      </div>
+
+      {/* الهاتف */}
+      <div className="mb-3">
+        <input type="tel" placeholder="رقم الهاتف (01xxxxxxxxx)" value={phone}
+          onChange={e => setPhone(e.target.value)}
+          onBlur={e => handleBlur("phone", e.target.value)}
+          dir="rtl"
+          className={`w-full px-4 py-3 border-2 rounded-xl text-sm focus:outline-none transition-colors ${errors.phone ? "border-red-400" : "border-[#e8eaed] focus:border-[#1a3c6e]"}`} />
+        {errors.phone && <p className="text-red-500 text-xs mt-1 text-right">{errors.phone}</p>}
+      </div>
+
+      {/* الإيميل */}
+      <div className="mb-3">
+        <input type="email" placeholder="البريد الإلكتروني" value={email}
+          onChange={e => setEmail(e.target.value)}
+          onBlur={e => handleBlur("email", e.target.value)}
+          dir="rtl"
+          className={`w-full px-4 py-3 border-2 rounded-xl text-sm focus:outline-none transition-colors ${errors.email ? "border-red-400" : "border-[#e8eaed] focus:border-[#1a3c6e]"}`} />
+        {errors.email && <p className="text-red-500 text-xs mt-1 text-right">{errors.email}</p>}
+      </div>
+
+      {/* كلمة المرور */}
+      <div className="mb-1">
+        <input type="password" placeholder="كلمة المرور" value={password}
+          onChange={e => setPassword(e.target.value)}
+          onBlur={e => handleBlur("password", e.target.value)}
+          dir="rtl"
+          className={`w-full px-4 py-3 border-2 rounded-xl text-sm focus:outline-none transition-colors ${errors.password ? "border-red-400" : "border-[#e8eaed] focus:border-[#1a3c6e]"}`} />
+        {errors.password && <p className="text-red-500 text-xs mt-1 text-right">{errors.password}</p>}
+      </div>
+
+      {/* Password Strength */}
+      {strength !== "empty" && (
+        <div className="mb-3">
+          <div className="w-full h-1 bg-[#e8eaed] rounded-full overflow-hidden">
+            <div className="h-full rounded-full transition-all duration-300"
+              style={{ width: strengthData.width, backgroundColor: strengthData.color }} />
+          </div>
+          <p className="text-xs mt-1 text-right" style={{ color: strengthData.color }}>
+            قوة كلمة المرور: {strengthData.label}
+          </p>
+        </div>
+      )}
+
+      {/* تأكيد كلمة المرور */}
+      <div className="mb-3">
+        <input type="password" placeholder="تأكيد كلمة المرور" value={confirmPassword}
+          onChange={e => setConfirmPassword(e.target.value)}
+          onBlur={e => handleBlur("confirmPassword", e.target.value)}
+          dir="rtl"
+          className={`w-full px-4 py-3 border-2 rounded-xl text-sm focus:outline-none transition-colors ${errors.confirmPassword ? "border-red-400" : "border-[#e8eaed] focus:border-[#1a3c6e]"}`} />
+        {errors.confirmPassword && <p className="text-red-500 text-xs mt-1 text-right">{errors.confirmPassword}</p>}
+      </div>
+
+      {/* كود الإحالة */}
+      <div className="mb-4">
+        <input type="text" placeholder="كود الإحالة (اختياري)" value={referralCode}
+          onChange={e => setReferralCode(e.target.value.toUpperCase())}
+          onBlur={e => handleBlur("referralCode", e.target.value)}
+          dir="rtl" maxLength={6}
+          className={`w-full px-4 py-3 border-2 rounded-xl text-sm focus:outline-none transition-colors ${errors.referralCode ? "border-red-400" : "border-[#e8eaed] focus:border-[#1a3c6e]"}`} />
+        {errors.referralCode && <p className="text-red-500 text-xs mt-1 text-right">{errors.referralCode}</p>}
+      </div>
+
+      {errors.general && <p className="text-red-500 text-xs text-center mb-3">{errors.general}</p>}
+
+      <button onClick={handleRegister} disabled={loading}
+        className="w-full py-3.5 bg-[#1a3c6e] text-white rounded-xl font-bold text-sm hover:bg-[#0d2447] transition-colors cursor-pointer disabled:opacity-50">
+        {loading ? "جاري..." : "إنشاء الحساب"}
+      </button>
+
+      <div className="text-center mt-4 text-xs text-[#6b7280]">
+        عندك حساب؟{" "}
+        <button onClick={onSwitchToLogin} className="text-[#1a3c6e] font-semibold hover:underline cursor-pointer">
+          سجل دخول
+        </button>
+      </div>
+    </div>
+  );
+}
+
+================================================
+FILE: components\dashboard\DashboardHeader.tsx
+================================================
+"use client";
+import Image from "next/image";
+import { User } from "@/types";
+
+interface DashboardHeaderProps {
+  userData: User | null;
+  activePage: string;
+}
+
+const pageNames: Record<string, string> = {
+  home: "الرئيسية",
+  deals: "العروض المتاحة",
+  requests: "الخدمات المطلوبة",
+  profile: "بياناتي",
+  points: "سجل نقاطي",
+};
+
+export default function DashboardHeader({ userData, activePage }: DashboardHeaderProps) {
+  return (
+    <header className="h-16 bg-[#1a3c6e] flex items-center justify-between px-8 shadow-md overflow-visible relative z-10">
+      {/* ─── Breadcrumb ─────────────────────────────────── */}
+      <div className="flex items-center gap-2 text-white/70 text-sm">
+        <span>سوا</span>
+        <span>/</span>
+        <span className="text-white font-semibold">
+          {pageNames[activePage] ?? "الرئيسية"}
+        </span>
+      </div>
+
+      {/* ─── صورة سوا في المنتصف ─────────────────────────── */}
+      <div className="flex-1 flex justify-center items-end translate-y-2">
+
+        <Image
+          src="/Sawa-paner.png"
+          alt="سوا معاً"
+          height={90}
+          width={200}
+          className="object-contain opacity-90"
+          onError={(e) => {
+            (e.target as HTMLImageElement).style.display = "none";
+          }}
+        />
+      </div>
+
+      {/* ─── Left Actions ───────────────────────────────── */}
+      <div className="flex items-center gap-4">
+        {/* الإشعارات */}
+        <button className="relative w-9 h-9 flex items-center justify-center rounded-full hover:bg-white/10 transition-colors cursor-pointer">
+          <span className="text-lg">🔔</span>
+          <span className="absolute top-1 right-1 w-2 h-2 bg-[#c9a84c] rounded-full" />
+        </button>
+
+        {/* اسم المستخدم */}
+        <div className="flex items-center gap-2">
+          <div className="w-8 h-8 rounded-full bg-white/20 flex items-center justify-center text-sm">
+            👤
+          </div>
+          <span className="text-white text-sm font-semibold">
+            {userData?.displayName ?? "مستخدم"}
+          </span>
+        </div>
+      </div>
+    </header>
+  );
+}
+
+================================================
+FILE: components\dashboard\DashboardLayout.tsx
+================================================
+"use client";
+import { useState } from "react";
+import { useUser } from "@/hooks/useUser";
+import Sidebar from "./Sidebar";
+import DashboardHeader from "./DashboardHeader";
+import StatsBar from "./StatsBar";
+import DealsSection from "./DealsSection";
+import RequestsSection from "./RequestsSection";
+
+// ─── Mock Data (مؤقت) ─────────────────────────────────────────
+const mockDeals = [
+  { id: "1", title: "حسومات السوبر ماركت", discount: "35%", icon: "🛒", members: 87, maxMembers: 100 },
+  { id: "2", title: "عروض الإلكترونيات", discount: "20%", icon: "📱", members: 64, maxMembers: 100 },
+  { id: "3", title: "كتب مدرسية", discount: "25%", icon: "📚", members: 45, maxMembers: 100 },
+  { id: "4", title: "خدمات طبية", discount: "15%", icon: "🏥", members: 32, maxMembers: 100 },
+];
+
+const mockRequests = [
+  { id: "1", title: "كتب مدرسية", icon: "📚", current: 45, target: 100 },
+  { id: "2", title: "سوبر ماركت", icon: "🛒", current: 23, target: 100 },
+  { id: "3", title: "دروس خصوصية", icon: "🏫", current: 67, target: 100 },
+];
+
+// ─── Content Renderer ─────────────────────────────────────────
+type ActiveSection = "home" | "deals" | "requests" | "points" | "profile" | string;
+
+function MainContent({
+  activeSection,
+  onSectionChange,
+  userData,
+}: {
+  activeSection: ActiveSection;
+  onSectionChange: (section: string) => void;
+  userData: ReturnType<typeof useUser>["userData"];
+}) {
+  const statsBar = (
+    <StatsBar
+      userData={userData}
+      dealsCount={mockDeals.length}
+      requestsCount={mockRequests.length}
+      onCardClick={onSectionChange}
+      activeSection={activeSection}
+    />
+  );
+
+  if (activeSection === "deals") {
+    return <>{statsBar}<DealsSection deals={mockDeals} /></>;
+  }
+
+  if (activeSection === "requests") {
+    return <>{statsBar}<RequestsSection requests={mockRequests} /></>;
+  }
+
+  if (activeSection === "points" || activeSection === "profile") {
+    return (
+      <>
+        {statsBar}
+        <div className="flex-1 bg-white rounded-2xl border border-[#e8eaed] shadow-sm min-h-[400px]" />
+      </>
+    );
+  }
+
+  // home — default
+  return (
+    <>
+      {statsBar}
+      <div className="flex gap-6">
+        <DealsSection deals={mockDeals} />
+        <RequestsSection requests={mockRequests} />
+      </div>
+    </>
+  );
+}
+
+export default function DashboardLayout() {
+  const { userData, loading } = useUser();
+  const [activePage, setActivePage] = useState("home");
+
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-[#f0f4f8]">
+        <div className="flex flex-col items-center gap-4">
+          <div className="w-12 h-12 border-4 border-[#1a3c6e] border-t-[#c9a84c] rounded-full animate-spin" />
+          <p className="text-[#1a3c6e] font-semibold">جاري التحميل...</p>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="min-h-screen flex flex-row bg-[#f0f4f8]" dir="rtl">
+      {/* ─── Sidebar (أول عنصر = يمين في RTL) ───────────── */}
+      <Sidebar
+        userData={userData}
+        activePage={activePage}
+        onNavigate={setActivePage}
+      />
+
+      {/* ─── Main Area ────────────────────────────────────── */}
+      <div className="flex-1 flex flex-col min-h-screen overflow-hidden">
+        <DashboardHeader userData={userData} activePage={activePage} />
+        <main className="flex-1 p-8 flex flex-col gap-6">
+          <MainContent
+            activeSection={activePage}
+            onSectionChange={setActivePage}
+            userData={userData}
+          />
+        </main>
+      </div>
+    </div>
+  );
+}
+
+================================================
+FILE: components\dashboard\DealsSection.tsx
+================================================
+"use client";
+
+interface Deal {
+  id: string;
+  title: string;
+  discount: string;
+  icon: string;
+  members: number;
+  maxMembers: number;
+}
+
+interface DealsSectionProps {
+  deals: Deal[];
+}
+
+const DealCard = ({ deal }: { deal: Deal }) => {
+  const progress = (deal.members / deal.maxMembers) * 100;
+
+  return (
+    <div className="bg-white rounded-2xl p-5 border border-[#e8eaed] shadow-sm hover:shadow-md hover:border-[#c9a84c] transition-all duration-200 group">
+      {/* Icon + Title */}
+      <div className="flex items-start justify-between mb-3">
+        <span className="text-3xl">{deal.icon}</span>
+        <span className="text-xs bg-[#f0f4f8] text-[#6b7280] px-2 py-1 rounded-full">
+          {deal.members} عضو
+        </span>
+      </div>
+
+      {/* Title */}
+      <h3 className="text-[#1a1a2e] font-bold text-sm mb-2 text-right">
+        {deal.title}
+      </h3>
+
+      {/* Discount */}
+      <p className="text-[#c9a84c] text-2xl font-extrabold text-right mb-3">
+        خصم {deal.discount}
+      </p>
+
+      {/* Progress */}
+      <div className="mb-4">
+        <div className="w-full h-1.5 bg-[#f0f4f8] rounded-full overflow-hidden">
+          <div
+            className="h-full bg-[#c9a84c] rounded-full transition-all duration-500"
+            style={{ width: `${progress}%` }}
+          />
+        </div>
+        <p className="text-[#6b7280] text-xs mt-1 text-right">
+          {deal.members} من {deal.maxMembers} مهتم
+        </p>
+      </div>
+
+      {/* Button */}
+      <button className="w-full py-2.5 bg-[#1a3c6e] text-white rounded-xl text-sm font-bold hover:bg-[#c9a84c] hover:text-[#1a3c6e] transition-all duration-200 cursor-pointer">
+        انضم الآن
+      </button>
+    </div>
+  );
+};
+
+export default function DealsSection({ deals }: DealsSectionProps) {
+  return (
+    <div className="flex-1">
+      {/* Header */}
+      <div className="flex items-center justify-between mb-5">
+        <h2 className="text-[#1a3c6e] text-lg font-extrabold">العروض المتاحة</h2>
+        <span className="bg-[#c9a84c] text-white text-xs font-bold px-3 py-1 rounded-full">
+          {deals.length}
+        </span>
+      </div>
+
+      {/* Grid */}
+      {deals.length === 0 ? (
+        <div className="flex flex-col items-center justify-center py-16 text-center">
+          <span className="text-4xl mb-3">🏷️</span>
+          <p className="text-[#6b7280] text-sm">لا توجد عروض متاحة حالياً</p>
+          <p className="text-[#c9a84c] text-xs mt-1">سجّل اهتمامك بالخدمات لتفعيل العروض</p>
+        </div>
+      ) : (
+        <div className="grid grid-cols-2 gap-4">
+          {deals.map(deal => (
+            <DealCard key={deal.id} deal={deal} />
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+================================================
+FILE: components\dashboard\RequestsSection.tsx
+================================================
+"use client";
+
+interface Request {
+  id: string;
+  title: string;
+  icon: string;
+  current: number;
+  target: number;
+}
+
+interface RequestsSectionProps {
+  requests: Request[];
+}
+
+const RequestCard = ({ request }: { request: Request }) => {
+  const progress = (request.current / request.target) * 100;
+
+  return (
+    <div className="bg-white rounded-xl p-4 border border-[#e8eaed] shadow-sm hover:shadow-md hover:border-[#c9a84c] transition-all duration-200">
+      <div className="flex items-center justify-between mb-3">
+        <div className="flex items-center gap-2">
+          <span className="text-xl">{request.icon}</span>
+          <span className="text-[#1a1a2e] font-bold text-sm">{request.title}</span>
+        </div>
+        <span className="text-[#c9a84c] text-xs font-bold">
+          {Math.round(progress)}%
+        </span>
+      </div>
+
+      {/* Progress Bar */}
+      <div className="w-full h-2 bg-[#f0f4f8] rounded-full overflow-hidden mb-2">
+        <div
+          className="h-full bg-[#c9a84c] rounded-full transition-all duration-500"
+          style={{ width: `${progress}%` }}
+        />
+      </div>
+
+      <p className="text-[#6b7280] text-xs text-right">
+        {request.current} من {request.target} مهتم
+      </p>
+    </div>
+  );
+};
+
+export default function RequestsSection({ requests }: RequestsSectionProps) {
+  return (
+    <div className="w-[42%] flex-shrink-0">
+      {/* Header */}
+      <div className="flex items-center justify-between mb-5">
+        <h2 className="text-[#1a3c6e] text-lg font-extrabold">طلباتي</h2>
+        <span className="bg-[#c9a84c] text-white text-xs font-bold px-3 py-1 rounded-full">
+          {requests.length}
+        </span>
+      </div>
+
+      {/* List */}
+      {requests.length === 0 ? (
+        <div className="flex flex-col items-center justify-center py-12 text-center">
+          <span className="text-4xl mb-3">📋</span>
+          <p className="text-[#6b7280] text-sm">لم تسجّل أي طلبات بعد</p>
+        </div>
+      ) : (
+        <div className="flex flex-col gap-3">
+          {requests.map(request => (
+            <RequestCard key={request.id} request={request} />
+          ))}
+        </div>
+      )}
+
+      {/* Add Request Button */}
+      <button className="w-full mt-4 py-3 border-2 border-[#1a3c6e] text-[#1a3c6e] rounded-xl text-sm font-bold hover:bg-[#1a3c6e] hover:text-white transition-all duration-200 cursor-pointer">
+        + سجّل اهتمامك بخدمة جديدة
+      </button>
+    </div>
+  );
+}
+
+================================================
+FILE: components\dashboard\Sidebar.tsx
+================================================
+"use client";
+import { useState } from "react";
+import Image from "next/image";
+import { logout } from "@/lib/auth";
+import { User } from "@/types";
+
+interface SidebarProps {
+  userData: User | null;
+  activePage: string;
+  onNavigate: (page: string) => void;
+}
+
+const tierColors: Record<string, string> = {
+  bronze: "#cd7f32",
+  silver: "#c0c0c0",
+  gold: "#c9a84c",
+  diamond: "#E8F4FD",
+};
+
+const tierNames: Record<string, string> = {
+  bronze: "برونزي",
+  silver: "فضي",
+  gold: "ذهبي",
+  diamond: "ماسي",
+};
+
+export default function Sidebar({ userData, activePage, onNavigate }: SidebarProps) {
+  const [servicesOpen, setServicesOpen] = useState(true);
+  const [accountOpen, setAccountOpen] = useState(false);
+
+  const tierColor = tierColors[userData?.tier ?? "bronze"];
+  const tierName = tierNames[userData?.tier ?? "bronze"];
+
+  const handleLogout = async () => {
+    await logout();
+    window.location.href = "/";
+  };
+
+  const NavItem = ({
+    id,
+    icon,
+    label,
+    onClick,
+    isChild = false,
+  }: {
+    id: string;
+    icon?: string;
+    label: string;
+    onClick: () => void;
+    isChild?: boolean;
+  }) => {
+    const isActive = activePage === id;
+    return (
+      <button
+        onClick={onClick}
+        className={`w-full flex items-center gap-3 px-4 py-2.5 rounded-xl transition-all duration-200 text-right cursor-pointer
+          ${isChild ? "pr-10 py-2" : ""}
+          ${isActive
+            ? "bg-white text-[#1a3c6e] font-bold border-r-4 border-[#c9a84c]"
+            : "text-white/70 hover:bg-white/10 hover:text-white"
+          }`}
+      >
+        {icon && <span className="text-base">{icon}</span>}
+        <span className={`text-sm ${isChild ? "text-xs" : ""}`}>{label}</span>
+      </button>
+    );
+  };
+
+  return (
+    <aside
+      className="w-[260px] min-h-screen flex flex-col"
+      style={{ background: "linear-gradient(180deg, #1a3c6e 0%, #0f2447 100%)" }}
+    >
+      {/* ─── Logo ─────────────────────────────────────────── */}
+      <div className="flex justify-center items-center py-6 border-b border-white/10">
+        <div className="w-12 h-12 rounded-full bg-white flex items-center justify-center shadow-lg">
+          <Image
+            src="/Sawa-logo.png"
+            alt="SAWA"
+            width={140}
+            height={80}
+            className="object-contain"
+            onError={(e) => {
+              (e.target as HTMLImageElement).style.display = "none";
+            }}
+          />
+        </div>
+      </div>
+
+      {/* ─── User Profile ─────────────────────────────────── */}
+      <div className="flex flex-col items-center py-6 px-4 border-b border-white/10">
+        <div
+          className="w-16 h-16 rounded-full bg-white/20 flex items-center justify-center text-2xl mb-3"
+          style={{ border: `2px solid ${tierColor}` }}
+        >
+          👤
+        </div>
+        <p className="font-bold text-base" style={{ color: tierColor }}>
+          {userData?.displayName ?? "مستخدم"}
+        </p>
+        <span
+          className="text-xs px-3 py-1 rounded-full mt-1 font-semibold"
+          style={{ backgroundColor: `${tierColor}22`, color: tierColor }}
+        >
+          {tierName} ⭐
+        </span>
+        <p className="text-white/60 text-xs mt-2">
+          {userData?.points ?? 0} نقطة
+        </p>
+      </div>
+
+      {/* ─── Navigation ───────────────────────────────────── */}
+      <nav className="flex-1 px-3 py-4 flex flex-col gap-1">
+        <NavItem id="home" icon="🏠" label="الرئيسية" onClick={() => onNavigate("home")} />
+
+        {/* الخدمات */}
+        <button
+          onClick={() => setServicesOpen(!servicesOpen)}
+          className="w-full flex items-center justify-between px-4 py-2.5 rounded-xl text-white/70 hover:bg-white/10 hover:text-white transition-all cursor-pointer"
+        >
+          <span className="flex items-center gap-3">
+            <span>🎯</span>
+            <span className="text-sm">الخدمات</span>
+          </span>
+          <span className="text-xs">{servicesOpen ? "▲" : "▼"}</span>
+        </button>
+        {servicesOpen && (
+          <div className="flex flex-col gap-0.5">
+            <NavItem id="deals" label="العروض المتاحة" onClick={() => onNavigate("deals")} isChild />
+            <NavItem id="requests" label="الخدمات المطلوبة" onClick={() => onNavigate("requests")} isChild />
+          </div>
+        )}
+
+        {/* حسابي */}
+        <button
+          onClick={() => setAccountOpen(!accountOpen)}
+          className="w-full flex items-center justify-between px-4 py-2.5 rounded-xl text-white/70 hover:bg-white/10 hover:text-white transition-all cursor-pointer"
+        >
+          <span className="flex items-center gap-3">
+            <span>👤</span>
+            <span className="text-sm">حسابي</span>
+          </span>
+          <span className="text-xs">{accountOpen ? "▲" : "▼"}</span>
+        </button>
+        {accountOpen && (
+          <div className="flex flex-col gap-0.5">
+            <NavItem id="profile" label="بياناتي" onClick={() => onNavigate("profile")} isChild />
+            <NavItem id="points" label="سجل نقاطي" onClick={() => onNavigate("points")} isChild />
+          </div>
+        )}
+      </nav>
+
+      {/* ─── Logout ───────────────────────────────────────── */}
+      <div className="px-3 py-4 border-t border-white/10">
+        <button
+          onClick={handleLogout}
+          className="w-full flex items-center gap-3 px-4 py-2.5 rounded-xl text-red-300 hover:bg-red-500/20 hover:text-red-200 transition-all cursor-pointer"
+        >
+          <span>🚪</span>
+          <span className="text-sm">تسجيل الخروج</span>
+        </button>
+      </div>
+    </aside>
+  );
+}
+
+================================================
+FILE: components\dashboard\StatsBar.tsx
+================================================
+"use client";
+import { User } from "@/types";
+
+interface StatsBarProps {
+  userData: User | null;
+  dealsCount: number;
+  requestsCount: number;
+  activeSection: string;
+  onCardClick: (section: string) => void;
+}
+
+const tierNames: Record<string, string> = {
+  bronze: "برونزي",
+  silver: "فضي",
+  gold: "ذهبي",
+  diamond: "ماسي",
+};
+
+interface StatCardProps {
+  label: string;
+  value: string | number;
+  icon: string;
+  sectionId: string;
+  activeSection: string;
+  onClick: (section: string) => void;
+}
+
+const StatCard = ({ label, value, icon, sectionId, activeSection, onClick }: StatCardProps) => {
+  const isActive = activeSection === sectionId;
+
+  return (
+    <button
+      onClick={() => onClick(sectionId)}
+      className={`flex-1 bg-white rounded-2xl p-5 flex items-center gap-4 shadow-sm border-t-4 transition-all duration-200 cursor-pointer text-right
+        ${isActive
+          ? "border border-[#c9a84c] border-t-[#c9a84c] shadow-md scale-[1.02]"
+          : "border border-[#e8eaed] border-t-[#c9a84c] hover:border-[#c9a84c] hover:shadow-md hover:scale-[1.02]"
+        }`}
+    >
+      <div className={`w-12 h-12 rounded-xl flex items-center justify-center text-2xl flex-shrink-0 transition-colors
+        ${isActive ? "bg-[#c9a84c]/20" : "bg-[#f0f4f8]"}`}>
+        {icon}
+      </div>
+      <div>
+        <p className="text-[#6b7280] text-xs mb-1">{label}</p>
+        <p className={`text-2xl font-extrabold ${isActive ? "text-[#c9a84c]" : "text-[#1a3c6e]"}`}>
+          {value}
+        </p>
+      </div>
+    </button>
+  );
+};
+
+export default function StatsBar({
+  userData,
+  dealsCount,
+  requestsCount,
+  activeSection,
+  onCardClick,
+}: StatsBarProps) {
+  return (
+    <div className="flex gap-4 mb-8">
+      <StatCard
+        label="إجمالي النقاط"
+        value={userData?.points ?? 0}
+        icon="🏆"
+        sectionId="points"
+        activeSection={activeSection}
+        onClick={onCardClick}
+      />
+      <StatCard
+        label="الفئة الحالية"
+        value={tierNames[userData?.tier ?? "bronze"]}
+        icon="⭐"
+        sectionId="profile"
+        activeSection={activeSection}
+        onClick={onCardClick}
+      />
+      <StatCard
+        label="العروض المتاحة"
+        value={dealsCount}
+        icon="🏷️"
+        sectionId="deals"
+        activeSection={activeSection}
+        onClick={onCardClick}
+      />
+      <StatCard
+        label="طلباتي النشطة"
+        value={requestsCount}
+        icon="📋"
+        sectionId="requests"
+        activeSection={activeSection}
+        onClick={onCardClick}
+      />
+    </div>
+  );
+}
+
+================================================
+FILE: components\home\ComingSoon.tsx
+================================================
+import { SERVICES } from "@/constants";
+
+export default function ComingSoon() {
+  return (
+    <section className="bg-[#f8f9fb] py-20 px-12">
+      <div className="max-w-6xl mx-auto">
+        <div className="flex justify-between items-end mb-10">
+          <div>
+            <h2 className="text-2xl font-extrabold text-[#0d2447]">الخدمات القادمة</h2>
+            <p className="text-sm text-[#6b7280] mt-1">انضم دلوقتي واحجز مكانك قبل الإطلاق</p>
+          </div>
+          <span className="text-xs text-[#6b7280]" style={{ fontFamily: "Inter, sans-serif" }}>
+            Coming Soon
+          </span>
+        </div>
+
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+          {SERVICES.map((service) => (
+            <div key={service.id}
+              className="bg-white rounded-2xl p-6 text-center border border-[#e8eaed] relative hover:-translate-y-1 hover:shadow-lg transition-all">
+              <span className="absolute top-2.5 right-2.5 text-[10px] bg-[#f8f9fb] text-[#6b7280] px-2 py-0.5 rounded-full font-bold"
+                style={{ fontFamily: "Inter, sans-serif" }}>
+                SOON
+              </span>
+              <div className="text-3xl mb-3 grayscale opacity-30">{service.icon}</div>
+              <div className="text-sm font-semibold text-[#bbb] mb-1">{service.nameAr}</div>
+            </div>
+          ))}
+        </div>
+      </div>
+    </section>
+  );
+}
+
+================================================
+FILE: components\home\Hero.tsx
+================================================
+import Image from "next/image";
+
+interface HeroProps {
+  onRegisterClick: () => void;
+}
+
+export default function Hero({ onRegisterClick }: HeroProps) {
+  return (
+    <section className="max-w-6xl mx-auto px-12 pt-8 pb-0 grid grid-cols-1 md:grid-cols-2 gap-12 items-center">
+      <div>
+        <div className="inline-flex items-center gap-2 text-[#c9a84c] text-xs font-semibold uppercase tracking-widest mb-5" style={{ fontFamily: "Inter, sans-serif" }}>
+          <span className="w-6 h-0.5 bg-[#c9a84c]"/>
+          Collective Power Platform
+        </div>
+        <h1 className="text-4xl md:text-5xl font-black leading-tight text-[#0d2447] mb-5">
+          لوحدك بتدفع أكتر.<br/>
+          مع <span className="text-[#c9a84c]">SAWA</span> بتدفع أقل.
+        </h1>
+        <p className="text-base text-[#6b7280] leading-relaxed mb-8 max-w-md">
+          SAWA بتجمع أصحاب الاحتياجات المشتركة — وبتتفاوض بقوة المجموعة عشان تحصل على أفضل سعر وأعلى جودة في أي خدمة.
+        </p>
+        <div className="flex gap-3 flex-wrap mb-10">
+          <button
+            onClick={onRegisterClick}
+            className="bg-[#1a3c6e] text-white px-8 py-3.5 rounded-xl font-bold text-base hover:bg-[#0d2447] hover:-translate-y-0.5 hover:shadow-lg hover:shadow-blue-900/25 transition-all cursor-pointer"
+          >
+            🚀 ابدأ مجاناً
+          </button>
+          <button className="border-2 border-[#1a3c6e] text-[#1a3c6e] px-7 py-3.5 rounded-xl font-semibold text-base hover:bg-[#f8f9fb] transition-all cursor-pointer">
+            اعرف أكتر
+          </button>
+        </div>
+        <div className="flex items-center gap-5 flex-wrap">
+          {["🔒 تسجيل آمن", "✅ مجاني 100%", "⚡ في 30 ثانية"].map((t, i) => (
+            <span key={i} className="flex items-center gap-1.5 text-xs text-[#6b7280]">{t}</span>
+          ))}
+        </div>
+      </div>
+
+      <div className="flex justify-center">
+        <div className="w-full max-w-[500px]">
+          <Image
+            src="/Sawa-banner.png"
+
+            alt="SAWA Characters"
+            width={500}
+            height={400}
+            className="w-full rounded-2xl"
+            priority
+          />
+        </div>
+      </div>
+    </section>
+  );
+}
+
+================================================
+FILE: components\home\Tagline.tsx
+================================================
+export default function Tagline() {
+  return (
+    <div className="bg-[#1a3c6e] py-16 px-12 text-center">
+      <h2 className="text-3xl md:text-4xl font-black text-white leading-tight">
+        لنبني مجتمعنا <span className="text-[#c9a84c]">سوا</span>
+      </h2>
+    </div>
+  );
+}
+
+================================================
+FILE: components\layout\Footer.tsx
+================================================
+export default function Footer() {
+  const socialLinks = [
+    {
+      cls: "bg-gradient-to-br from-[#1877f2] to-[#0c5bcd]",
+      title: "Facebook",
+      icon: (
+        <svg viewBox="0 0 24 24" className="w-4 h-4" fill="white">
+          <path d="M18 2h-3a5 5 0 00-5 5v3H7v4h3v8h4v-8h3l1-4h-4V7a1 1 0 011-1h3z"/>
+        </svg>
+      ),
+    },
+    {
+      cls: "bg-gradient-to-br from-[#f09433] via-[#dc2743] to-[#bc1888]",
+      title: "Instagram",
+      icon: (
+        <svg viewBox="0 0 24 24" className="w-4 h-4" fill="none" stroke="white" strokeWidth="2">
+          <rect x="2" y="2" width="20" height="20" rx="5"/>
+          <path d="M16 11.37A4 4 0 1112.63 8 4 4 0 0116 11.37z"/>
+          <line x1="17.5" y1="6.5" x2="17.51" y2="6.5"/>
+        </svg>
+      ),
+    },
+    {
+      cls: "bg-gradient-to-br from-[#2d2d2d] to-[#010101]",
+      title: "TikTok",
+      icon: (
+        <svg viewBox="0 0 24 24" className="w-4 h-4" fill="white">
+          <path d="M19.59 6.69a4.83 4.83 0 01-3.77-4.25V2h-3.45v13.67a2.89 2.89 0 01-5.77 0 2.89 2.89 0 012.89-2.89c.28 0 .54.04.79.1V9.01a6.34 6.34 0 100 12.67 6.34 6.34 0 006.33-6.34V8.69a8.18 8.18 0 004.78 1.52V6.76a4.85 4.85 0 01-1.01-.07z"/>
+        </svg>
+      ),
+    },
+    {
+      cls: "bg-gradient-to-br from-[#ff0000] to-[#cc0000]",
+      title: "YouTube",
+      icon: (
+        <svg viewBox="0 0 24 24" className="w-4 h-4" fill="white">
+          <path d="M22.54 6.42a2.78 2.78 0 00-1.95-1.96C18.88 4 12 4 12 4s-6.88 0-8.59.46a2.78 2.78 0 00-1.95 1.96A29 29 0 001 12a29 29 0 00.46 5.58A2.78 2.78 0 003.41 19.6C5.12 20 12 20 12 20s6.88 0 8.59-.46a2.78 2.78 0 001.95-1.95A29 29 0 0023 12a29 29 0 00-.46-5.58z"/>
+          <polygon points="9.75 15.02 15.5 12 9.75 8.98 9.75 15.02" fill="#ff0000"/>
+        </svg>
+      ),
+    },
+    {
+      cls: "bg-gradient-to-br from-[#2aabee] to-[#1a8ecb]",
+      title: "Telegram",
+      icon: (
+        <svg viewBox="0 0 24 24" className="w-4 h-4" fill="none" stroke="white" strokeWidth="2">
+          <path d="M22 2L11 13M22 2L15 22l-4-9-9-4 20-7z"/>
+        </svg>
+      ),
+    },
+  ];
+
+  return (
+    <footer className="bg-[#0d2447] px-12 pt-7 pb-4">
+      <div className="max-w-6xl mx-auto">
+        <div className="flex flex-wrap items-center justify-between gap-5 pb-5 border-b border-white/10">
+          <div className="text-white font-bold text-base" style={{ fontFamily: "Inter, sans-serif" }}>
+            SAWA<span className="text-[#c9a84c]">.</span>
+          </div>
+
+          <div className="flex gap-5 flex-wrap">
+            {["كيف تعمل؟", "العضوية", "لأصحاب الأعمال", "تواصل معنا"].map((link, i) => (
+              <a key={i} href="#" className="text-xs text-white/50 hover:text-white transition-colors">
+                {link}
+              </a>
+            ))}
+          </div>
+
+          <div className="flex items-center gap-3 flex-wrap" dir="ltr">
+            <div className="flex gap-2">
+              {socialLinks.map((s, i) => (
+                <a key={i} href="#" title={s.title}
+                  className={`w-8 h-8 rounded-lg flex items-center justify-center hover:-translate-y-0.5 hover:shadow-lg transition-all ${s.cls}`}>
+                  {s.icon}
+                </a>
+              ))}
+            </div>
+            <div className="flex gap-2">
+              {["🍎 App Store", "▶ Google Play"].map((b, i) => (
+                <button key={i}
+                  className="text-[10px] text-white/60 border border-white/10 bg-white/5 rounded-md px-2.5 py-1 hover:bg-white/10 transition-colors cursor-pointer"
+                  style={{ fontFamily: "Inter, sans-serif" }}>
+                  {b}
+                </button>
+              ))}
+            </div>
+          </div>
+        </div>
+
+        <div className="flex justify-between items-center flex-wrap gap-2 pt-3">
+          <p className="text-[11px] text-white/25">© 2025 SAWA. All rights reserved.</p>
+          <div className="flex items-center gap-1.5 text-[11px] text-white/25" style={{ fontFamily: "Inter, sans-serif" }}>
+            <svg viewBox="0 0 24 24" className="w-3 h-3 text-[#c9a84c]" fill="none" stroke="currentColor" strokeWidth="2">
+              <path d="M12 2L4 6v6c0 5.25 3.5 10.15 8 11.35C16.5 22.15 20 17.25 20 12V6l-8-4z"/>
+            </svg>
+            Protected & Secured
+          </div>
+        </div>
+      </div>
+    </footer>
+  );
+}
+
+================================================
+FILE: components\layout\Navbar.tsx
+================================================
+"use client";
+import Image from "next/image";
+import { useCity } from "@/hooks/useCity";
+import { useAuth } from "@/hooks/useAuth";
+
+interface NavbarProps {
+  onLoginClick: () => void;
+}
+
+export default function Navbar({ onLoginClick }: NavbarProps) {
+  const { selectedCity, cityOpen, setCityOpen, selectCity, cities } = useCity();
+  const { user } = useAuth();
+
+  return (
+    <>
+      {/* ANNOUNCEMENT BAR */}
+      <div className="bg-[#0d2447] text-white/75 text-center py-2 px-6 text-xs tracking-wide">
+        🌍 SAWA متاحة دلوقتي في{" "}
+        <span className="text-[#f0d980] font-semibold">{selectedCity.nameAr}</span>{" "}
+        — وقريباً في محافظات أكتر
+      </div>
+
+      {/* NAV */}
+      <nav className="sticky top-0 z-50 bg-white/95 backdrop-blur-md border-b border-[#e8eaed] px-12 h-16 flex items-center justify-between gap-6">
+        <a href="/" className="flex items-center flex-shrink-0">
+          <Image src="/Sawa-logo.png" alt="SAWA" width={120} height={42} priority />
+        </a>
+
+        <div className="hidden md:flex items-center gap-1 flex-1 justify-center">
+          {["الخدمات", "كيف تعمل؟", "العضوية", "لأصحاب الأعمال"].map((item, i) => (
+            <a key={i} href="#"
+              className="text-sm text-[#6b7280] px-3 py-2 rounded-lg hover:text-[#111827] hover:bg-[#f8f9fb] transition-all whitespace-nowrap flex items-center gap-1">
+              {item}
+              {i === 0 && (
+                <span className="text-[10px] bg-[#c9a84c] text-[#1a3c6e] px-1.5 py-0.5 rounded-full font-bold">
+                  قريباً
+                </span>
+              )}
+            </a>
+          ))}
+        </div>
+
+        <div className="flex items-center gap-2 flex-shrink-0" dir="ltr">
+          <button
+            onClick={() => setCityOpen(!cityOpen)}
+            className="flex items-center gap-1.5 border border-[#e8eaed] rounded-full px-3 py-1.5 text-xs text-[#111827] bg-white hover:border-[#1a3c6e] transition-colors cursor-pointer"
+          >
+            <svg className="w-3 h-3 text-[#6b7280]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7z"/>
+              <circle cx="12" cy="9" r="2.5"/>
+            </svg>
+            {selectedCity.nameAr}
+            <svg className="w-3 h-3 text-[#6b7280]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <path d="M6 9l6 6 6-6"/>
+            </svg>
+          </button>
+          <div className="w-px h-5 bg-[#e8eaed]"/>
+          {user ? (
+            <span className="text-sm font-semibold text-[#1a3c6e]">
+              {user.displayName || user.email}
+            </span>
+          ) : (
+            <button
+              onClick={onLoginClick}
+              className="text-sm text-[#111827] px-4 py-1.5 rounded-lg hover:bg-[#f8f9fb] hover:text-[#1a3c6e] transition-all font-semibold cursor-pointer"
+            >
+              Login
+            </button>
+          )}
+        </div>
+      </nav>
+
+      {/* CITY DROPDOWN */}
+      {cityOpen && (
+        <div className="fixed inset-0 z-40" onClick={() => setCityOpen(false)}>
+          <div
+            className="absolute top-16 left-12 bg-white rounded-2xl shadow-2xl p-5 min-w-[220px]"
+            onClick={e => e.stopPropagation()}
+          >
+            <h3 className="text-xs font-bold text-[#6b7280] uppercase tracking-widest mb-3">
+              Select City
+            </h3>
+            {cities.map((city) => (
+              <div
+                key={city.id}
+                onClick={() => selectCity(city)}
+                className={`flex items-center justify-between px-3 py-2.5 rounded-lg cursor-pointer transition-colors ${
+                  city.id === selectedCity.id ? "bg-blue-50" : "hover:bg-[#f8f9fb]"
+                }`}
+              >
+                <span className="text-sm text-[#111827]">{city.nameAr}</span>
+                {city.id === selectedCity.id && <span className="text-[#1a3c6e]">✓</span>}
+                {!city.available && (
+                  <span className="text-[10px] bg-[#f8f9fb] text-[#6b7280] px-1.5 py-0.5 rounded-full font-bold">
+                    SOON
+                  </span>
+                )}
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+    </>
+  );
+}
+
+================================================
+FILE: components\ErrorBoundary.tsx
+================================================
+"use client";
+import { Component, ReactNode } from "react";
+
+interface Props {
+  children: ReactNode;
+}
+
+interface State {
+  hasError: boolean;
+}
+
+export default class ErrorBoundary extends Component<Props, State> {
+  constructor(props: Props) {
+    super(props);
+    this.state = { hasError: false };
+  }
+
+  static getDerivedStateFromError(): State {
+    return { hasError: true };
+  }
+
+  render() {
+    if (this.state.hasError) {
+      return (
+        <div className="min-h-screen flex items-center justify-center bg-[#f0f4f8]" dir="rtl">
+          <div className="bg-white rounded-2xl p-8 max-w-md w-full text-center shadow-lg">
+            <div className="text-4xl mb-4">⚠️</div>
+            <h2 className="text-xl font-extrabold text-[#0d2447] mb-2">
+              حدث خطأ غير متوقع
+            </h2>
+            <p className="text-sm text-[#6b7280] mb-6">
+              نعتذر عن هذا الخطأ — يرجى إعادة تحميل الصفحة.
+            </p>
+            <button
+              onClick={() => window.location.reload()}
+              className="w-full py-3 bg-[#1a3c6e] text-white rounded-xl font-bold text-sm hover:bg-[#0d2447] transition-colors cursor-pointer"
+            >
+              إعادة التحميل
+            </button>
+          </div>
+        </div>
+      );
+    }
+    return this.props.children;
+  }
+}
+
+================================================
+FILE: hooks\useAuth.ts
+================================================
+"use client";
+import { useState, useEffect } from "react";
+import { onAuthStateChanged, User as FirebaseUser } from "firebase/auth";
+import { auth } from "@/lib/firebase";
+
+export const useAuth = () => {
+  const [user, setUser] = useState<FirebaseUser | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const unsubscribe = onAuthStateChanged(auth, (firebaseUser) => {
+      setUser(firebaseUser);
+      setLoading(false);
+    });
+    return () => unsubscribe();
+  }, []);
+
+  return { user, loading };
+};
+
+================================================
+FILE: hooks\useCity.ts
+================================================
+"use client";
+import { useState } from "react";
+import { City } from "@/types";
+import { CITIES } from "@/constants";
+
+export const useCity = () => {
+  const [selectedCity, setSelectedCity] = useState<City>(
+    CITIES.find((c) => c.available) ?? CITIES[0]
+  );
+  const [cityOpen, setCityOpen] = useState(false);
+
+  const selectCity = (city: City) => {
+    if (city.available) {
+      setSelectedCity(city);
+      setCityOpen(false);
+    }
+  };
+
+  return {
+    selectedCity,
+    cityOpen,
+    setCityOpen,
+    selectCity,
+    cities: CITIES,
+  };
+};
+
+================================================
+FILE: hooks\useUser.ts
+================================================
+"use client";
+import { useState, useEffect } from "react";
+import { onAuthStateChanged, User as FirebaseUser } from "firebase/auth";
+import { doc, onSnapshot } from "firebase/firestore";
+import { auth, db } from "@/lib/firebase";
+import { User } from "@/types";
+
+interface UseUserReturn {
+  firebaseUser: FirebaseUser | null;
+  userData: User | null;
+  loading: boolean;
+  isAuthenticated: boolean;
+  error: string | null;
+}
+
+export const useUser = (): UseUserReturn => {
+  const [firebaseUser, setFirebaseUser] = useState<FirebaseUser | null>(null);
+  const [userData, setUserData] = useState<User | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    const unsubscribeAuth = onAuthStateChanged(auth, (user) => {
+      setFirebaseUser(user);
+      setError(null);
+
+      if (user) {
+        const userRef = doc(db, "users", user.uid);
+        const unsubscribeFirestore = onSnapshot(
+          userRef,
+          (snapshot) => {
+            if (snapshot.exists()) {
+              setUserData(snapshot.data() as User);
+            } else {
+              setUserData(null);
+            }
+            setLoading(false);
+          },
+          (err) => {
+            console.error("Firestore error:", err);
+            setError("حدث خطأ في تحميل البيانات");
+            setLoading(false);
+          }
+        );
+        return () => unsubscribeFirestore();
+      } else {
+        setUserData(null);
+        setLoading(false);
+      }
+    },
+    (err) => {
+      console.error("Auth error:", err);
+      setError("حدث خطأ في المصادقة");
+      setLoading(false);
+    });
+
+    return () => unsubscribeAuth();
+  }, []);
+
+  return {
+    firebaseUser,
+    userData,
+    loading,
+    isAuthenticated: !!firebaseUser,
+    error,
+  };
+};
+
+================================================
+FILE: lib\auth.ts
+================================================
+import {
+  signInWithEmailAndPassword,
+  createUserWithEmailAndPassword,
+  signInWithPopup,
+  GoogleAuthProvider,
+  signOut,
+  sendEmailVerification,
+  sendPasswordResetEmail,
+  User,
+} from "firebase/auth";
+import {
+  doc,
+  setDoc,
+  getDoc,
+  serverTimestamp,
+} from "firebase/firestore";
+import { auth, db } from "./firebase";
+
+const googleProvider = new GoogleAuthProvider();
+
+// ─── توليد كود إحالة ──────────────────────────────────────────
+const generateReferralCode = (uid: string): string => {
+  const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
+  let code = "";
+  let seed = Math.abs(
+    uid.split("").reduce((acc, char) => acc + char.charCodeAt(0), 0)
+  );
+  for (let i = 0; i < 6; i++) {
+    code += chars[seed % chars.length];
+    seed = Math.floor(seed / chars.length) || seed * 31 + i;
+  }
+  return code;
+};
+
+// ─── حفظ بيانات المستخدم في Firestore ────────────────────────
+const saveUserToFirestore = async (
+  user: User,
+  extra?: {
+    displayName?: string;
+    phone?: string;
+    referralCode?: string;
+  }
+) => {
+  const userRef = doc(db, "users", user.uid);
+  const existing = await getDoc(userRef);
+  if (existing.exists()) return;
+
+  await setDoc(userRef, {
+    uid: user.uid,
+    displayName: extra?.displayName || user.displayName || "",
+    email: user.email || "",
+    phone: extra?.phone || null,
+    photoUrl: user.photoURL || null,
+    city: "fayoum",
+    address: null,
+    role: "user",
+    tier: "bronze",
+    points: 25,
+    referralCode: generateReferralCode(user.uid),
+    referredBy: extra?.referralCode || null,
+    emailVerified: false,
+    isActive: true,
+    createdAt: serverTimestamp(),
+    updatedAt: serverTimestamp(),
+  });
+};
+
+// ─── Login ────────────────────────────────────────────────────
+export const loginWithEmail = (email: string, password: string) =>
+  signInWithEmailAndPassword(auth, email, password);
+
+// ─── Register ─────────────────────────────────────────────────
+export const registerWithEmail = async (
+  email: string,
+  password: string,
+  displayName: string,
+  phone: string,
+  referralCode?: string
+) => {
+  const credential = await createUserWithEmailAndPassword(
+    auth,
+    email,
+    password
+  );
+  await sendEmailVerification(credential.user);
+  await saveUserToFirestore(credential.user, {
+    displayName,
+    phone,
+    referralCode,
+  });
+  return credential;
+};
+
+// ─── Google Sign-In ───────────────────────────────────────────
+export const loginWithGoogle = async () => {
+  const credential = await signInWithPopup(auth, googleProvider);
+  await saveUserToFirestore(credential.user);
+  return credential;
+};
+
+// ─── Forgot Password ──────────────────────────────────────────
+export const forgotPassword = (email: string) =>
+  sendPasswordResetEmail(auth, email);
+
+// ─── Logout ───────────────────────────────────────────────────
+export const logout = () => signOut(auth);
+
+================================================
+FILE: lib\authErrors.ts
+================================================
+// lib/authErrors.ts
+
+// ─── Firebase Auth Error Codes → Arabic Messages ──────────────
+export const mapAuthError = (code: string): string => {
+  switch (code) {
+    case "auth/user-not-found":
+      return "الحساب غير موجود";
+    case "auth/wrong-password":
+      return "كلمة المرور غلط";
+    case "auth/invalid-credential":
+      return "البريد الإلكتروني أو كلمة المرور غير صحيحة";
+    case "auth/invalid-email":
+      return "البريد الإلكتروني غير صالح";
+    case "auth/too-many-requests":
+      return "تم تجاوز عدد المحاولات — حاول بعد قليل";
+    case "auth/user-disabled":
+      return "هذا الحساب موقوف — تواصل مع الدعم";
+    case "auth/email-already-in-use":
+      return "البريد الإلكتروني مستخدم بالفعل";
+    case "auth/weak-password":
+      return "كلمة المرور ضعيفة — 8 أحرف على الأقل";
+    case "auth/popup-closed-by-user":
+      return "تم إغلاق نافذة تسجيل الدخول";
+    case "auth/popup-blocked":
+      return "تم حجب النافذة — يرجى السماح بالنوافذ المنبثقة";
+    case "auth/cancelled-popup-request":
+      return "تم إلغاء طلب تسجيل الدخول";
+    case "auth/network-request-failed":
+      return "خطأ في الاتصال — تحقق من الإنترنت";
+    default:
+      return "حصل خطأ غير متوقع — حاول تاني";
+  }
+};
+
+// ─── Field-specific error keys ────────────────────────────────
+export const getFieldError = (
+  code: string
+): { field: string; message: string } => {
+  switch (code) {
+    case "auth/email-already-in-use":
+      return { field: "email", message: "البريد الإلكتروني مستخدم بالفعل" };
+    case "auth/invalid-email":
+      return { field: "email", message: "البريد الإلكتروني غير صالح" };
+    case "auth/weak-password":
+      return { field: "password", message: "كلمة المرور ضعيفة — 8 أحرف على الأقل" };
+    default:
+      return { field: "general", message: mapAuthError(code) };
+  }
+};
+
+================================================
+FILE: lib\firebase.ts
+================================================
+// lib/firebase.ts
+
+import { initializeApp, getApps } from "firebase/app";
+import { getAuth } from "firebase/auth";
+import { getFirestore } from "firebase/firestore";
+
+// ─── Environment Validation ───────────────────────────────────
+const requiredEnvVars = {
+  apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY,
+  authDomain: process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN,
+  projectId: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID,
+  storageBucket: process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET,
+  messagingSenderId: process.env.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID,
+  appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID,
+};
+
+const missingVars = Object.entries(requiredEnvVars)
+  .filter(([, value]) => !value)
+  .map(([key]) => `NEXT_PUBLIC_FIREBASE_${key.toUpperCase()}`);
+
+if (missingVars.length > 0) {
+  throw new Error(
+    `Firebase config missing: ${missingVars.join(", ")}`
+  );
+}
+
+// ─── Firebase Init ────────────────────────────────────────────
+const app =
+  getApps().length === 0
+    ? initializeApp(requiredEnvVars)
+    : getApps()[0];
+
+const auth = getAuth(app);
+const db = getFirestore(app);
+
+export { auth, db };
+export default app;
+
+================================================
+FILE: lib\validations.ts
+================================================
+// lib/validations.ts
+
+// ─── Email ────────────────────────────────────────────────────
+export const isValidEmail = (email: string): boolean =>
+  /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim());
+
+// ─── Egyptian Phone ───────────────────────────────────────────
+export const isValidEgyptianPhone = (phone: string): boolean =>
+  /^(010|011|012|015)\d{8}$/.test(phone.trim());
+
+// ─── Password ─────────────────────────────────────────────────
+export const isValidPassword = (password: string): boolean =>
+  password.length >= 8 &&
+  /[A-Z]/.test(password) &&
+  /[a-z]/.test(password) &&
+  /[0-9]/.test(password);
+
+// ─── Referral Code ────────────────────────────────────────────
+export const isValidReferralCode = (code: string): boolean =>
+  code.length === 6;
+
+// ─── Password Strength ────────────────────────────────────────
+export type PasswordStrength = "empty" | "weak" | "medium" | "strong";
+
+export const getPasswordStrength = (password: string): PasswordStrength => {
+  if (!password) return "empty";
+  let score = 0;
+  if (password.length >= 8) score++;
+  if (/[A-Z]/.test(password)) score++;
+  if (/[a-z]/.test(password)) score++;
+  if (/[0-9]/.test(password)) score++;
+  if (/[!@#$%^&*(),.?":{}|<>]/.test(password)) score++;
+  if (score <= 2) return "weak";
+  if (score <= 3) return "medium";
+  return "strong";
+};
+
+export const strengthConfig = {
+  empty: { label: "", color: "", width: "0%" },
+  weak: { label: "ضعيفة", color: "#e53935", width: "33%" },
+  medium: { label: "متوسطة", color: "#f57c00", width: "66%" },
+  strong: { label: "قوية", color: "#43a047", width: "100%" },
+};
+
+// ─── Register Form Validator ──────────────────────────────────
+export const validateRegisterField = (
+  name: string,
+  value: string,
+  password?: string
+): string => {
+  switch (name) {
+    case "displayName":
+      if (!value.trim()) return "الاسم مطلوب";
+      if (value.trim().length < 3) return "الاسم يجب أن يكون 3 أحرف على الأقل";
+      return "";
+    case "phone":
+      if (!value.trim()) return "رقم الهاتف مطلوب";
+      if (!isValidEgyptianPhone(value)) return "رقم هاتف مصري غير صالح";
+      return "";
+    case "email":
+      if (!value.trim()) return "البريد الإلكتروني مطلوب";
+      if (!isValidEmail(value)) return "بريد إلكتروني غير صالح";
+      return "";
+    case "password":
+      if (!isValidPassword(value))
+        return "كلمة المرور: 8 أحرف على الأقل، حروف كبيرة وصغيرة وأرقام";
+      return "";
+    case "confirmPassword":
+      if (value !== password) return "كلمات المرور غير متطابقة";
+      return "";
+    case "referralCode":
+      if (value && !isValidReferralCode(value))
+        return "كود الإحالة يجب أن يكون 6 أحرف";
+      return "";
+    default:
+      return "";
+  }
+};
+
+================================================
+FILE: types\index.ts
+================================================
+export interface User {
+  uid: string;
+  email: string;
+  displayName: string;
+  phone?: string;
+  photoURL?: string;
+  city: string;
+  role: "user" | "vendor" | "admin";
+  tier: "bronze" | "silver" | "gold" | "diamond";
+  points: number;
+  referralCode: string;
+  referredBy?: string;
+  emailVerified: boolean;
+  isActive: boolean;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+export interface City {
+  id: string;
+  name: string;
+  nameAr: string;
+  available: boolean;
+}
+
+export interface Service {
+  id: string;
+  nameAr: string;
+  icon: string;
+  available: boolean;
+}
+
+export type AuthMode = "login" | "register" | "forgotPassword";
+
+
+================================================
+FILE: constants\index.ts
+================================================
+import { City, Service } from "@/types";
+
+export const CITIES: City[] = [
+  { id: "fayoum", name: "Fayoum", nameAr: "الفيوم", available: true },
+  { id: "cairo", name: "Cairo", nameAr: "القاهرة", available: false },
+  { id: "alex", name: "Alexandria", nameAr: "الإسكندرية", available: false },
+  { id: "minya", name: "Minya", nameAr: "المنيا", available: false },
+  { id: "assiut", name: "Assiut", nameAr: "أسيوط", available: false },
+];
+
+export const SERVICES: Service[] = [
+  { id: "books", nameAr: "كتب مدرسية", icon: "📚", available: false },
+  { id: "supermarket", nameAr: "سوبر ماركت", icon: "🛒", available: false },
+  { id: "restaurants", nameAr: "مطاعم", icon: "🍽️", available: false },
+  { id: "medical", nameAr: "خدمات طبية", icon: "🏥", available: false },
+  { id: "maintenance", nameAr: "صيانة منزلية", icon: "🔧", available: false },
+  { id: "travel", nameAr: "سفر وترفيه", icon: "✈️", available: false },
+  { id: "tech", nameAr: "تكنولوجيا", icon: "📱", available: false },
+  { id: "education", nameAr: "تعليم", icon: "🏫", available: false },
+];
+
+export const TIERS = {
+  bronze: { min: 100, max: 299, nameAr: "برونزية" },
+  silver: { min: 300, max: 599, nameAr: "فضية" },
+  gold: { min: 600, max: 999, nameAr: "ذهبية" },
+  diamond: { min: 1000, max: Infinity, nameAr: "ماسية" },
+};
+
+================================================
+FILE: middleware.ts
+================================================
+// middleware.ts
+
+import { NextResponse } from "next/server";
+import type { NextRequest } from "next/server";
+
+export function middleware(request: NextRequest) {
+  return NextResponse.next();
+}
+
+export const config = {
+  matcher: [],
+};
