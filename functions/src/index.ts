@@ -6,3 +6,4 @@ export {onUserRegistered} from "./auth/onUserRegistered";
 export {onFirstLogin} from "./auth/onFirstLogin";
 export {onReferralRequest} from "./auth/onReferralRequest";
 export {onAdminApprove} from "./auth/onAdminApprove";
+export {scheduledExpiry} from "./auth/scheduledExpiry";
