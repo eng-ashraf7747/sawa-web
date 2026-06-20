@@ -9,11 +9,23 @@ export interface User {
   tier: "bronze" | "silver" | "gold" | "diamond";
   points: number;
   referralCode: string;
+  referralStatus: "active" | "expired" | "pending" | "rejected";
+  referralActivatedAt?: Date;
+  referralUsageCount: number;
+  referralRequestCount: number;
+  referralRequestMonth: string;
   referredBy?: string;
   emailVerified: boolean;
   isActive: boolean;
   createdAt: Date;
   updatedAt: Date;
+}
+
+export interface PointsLedgerEntry {
+  type: "signup_bonus" | "referral_joiner_bonus" | "referral_owner_bonus" | "admin_adjustment" | "subscription_payment";
+  points: number;
+  timestamp: Date;
+  note: string;
 }
 
 export interface City {

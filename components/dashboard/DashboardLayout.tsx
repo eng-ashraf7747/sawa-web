@@ -7,8 +7,8 @@ import DashboardHeader from "./DashboardHeader";
 import StatsBar from "./StatsBar";
 import DealsSection from "./DealsSection";
 import RequestsSection from "./RequestsSection";
+import PointsSection from "./PointsSection";
 
-// ─── Content Renderer ─────────────────────────────────────────
 type ActiveSection = "home" | "deals" | "requests" | "points" | "profile" | string;
 
 function MainContent({
@@ -33,12 +33,13 @@ function MainContent({
   if (activeSection === "deals") {
     return <>{statsBar}<DealsSection deals={mockDeals} /></>;
   }
-
   if (activeSection === "requests") {
     return <>{statsBar}<RequestsSection requests={mockRequests} /></>;
   }
-
-  if (activeSection === "points" || activeSection === "profile") {
+  if (activeSection === "points") {
+    return <>{statsBar}<PointsSection userData={userData} /></>;
+  }
+  if (activeSection === "profile") {
     return (
       <>
         {statsBar}
@@ -46,7 +47,6 @@ function MainContent({
       </>
     );
   }
-
   return (
     <>
       {statsBar}
