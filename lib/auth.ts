@@ -18,21 +18,7 @@ import { auth, db } from "./firebase";
 
 const googleProvider = new GoogleAuthProvider();
 
-// ─── توليد كود إحالة ──────────────────────────────────────────
-const generateReferralCode = (uid: string): string => {
-  const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
-  let code = "";
-  let seed = Math.abs(
-    uid.split("").reduce((acc, char) => acc + char.charCodeAt(0), 0)
-  );
-  for (let i = 0; i < 6; i++) {
-    code += chars[seed % chars.length];
-    seed = Math.floor(seed / chars.length) || seed * 31 + i;
-  }
-  return code;
-};
-
-// ─── حفظ بيانات المستخدم في Firestore ────────────────────────
+// ─── حفظ البيانات الأساسية فقط — المنطق في Cloud Functions ───
 const saveUserToFirestore = async (
   user: User,
   extra?: {
@@ -55,8 +41,6 @@ const saveUserToFirestore = async (
     address: null,
     role: "user",
     tier: "bronze",
-    points: 25,
-    referralCode: generateReferralCode(user.uid),
     referredBy: extra?.referralCode || null,
     emailVerified: false,
     isActive: true,
