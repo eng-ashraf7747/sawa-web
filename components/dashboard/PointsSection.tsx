@@ -1,5 +1,6 @@
 "use client";
 import { useState } from "react";
+import { getFunctions, httpsCallable } from "firebase/functions";
 import { User } from "@/types";
 import { usePoints } from "@/hooks/usePoints";
 
@@ -24,11 +25,31 @@ const referralStatusConfig = {
 export default function PointsSection({ userData }: PointsSectionProps) {
   const { summary, loading } = usePoints(userData?.uid);
   const [copied, setCopied] = useState(false);
+  const [requesting, setRequesting] = useState(false);
+  const [requestMsg, setRequestMsg] = useState<{ type: "success" | "error"; text: string } | null>(null);
 
   const tier = tierConfig[userData?.tier ?? "bronze"];
   const referralStatus = referralStatusConfig[userData?.referralStatus ?? "expired"];
-  const canRequestCode = userData?.referralStatus === "expired" || userData?.referralStatus === "rejected";
 
+  // ─── حساب حالة الزر ───────────────────────────────────────
+  const now = new Date();
+  const currentMonth = `${now.getFullYear()}-${now.getMonth() + 1}`;
+  const requestCount = userData?.referralRequestMonth === currentMonth
+    ? (userData?.referralRequestCount ?? 0)
+    : 0;
+  const remainingRequests = 3 - requestCount;
+
+  const canRequest = userData?.referralStatus !== "active" && remainingRequests > 0;
+
+  const getDisabledReason = () => {
+    if (userData?.referralStatus === "active") return "يوجد كود فعال حالياً";
+    if (remainingRequests <= 0) return "تم استهلاك عدد الطلبات المتاحة شهرياً";
+    return null;
+  };
+
+  const disabledReason = getDisabledReason();
+
+  // ─── نسخ الكود ────────────────────────────────────────────
   const handleCopy = async () => {
     if (!userData?.referralCode) return;
     await navigator.clipboard.writeText(userData.referralCode);
@@ -36,24 +57,36 @@ export default function PointsSection({ userData }: PointsSectionProps) {
     setTimeout(() => setCopied(false), 2000);
   };
 
-  const getExpiryText = () => {
-  if (!userData?.referralActivatedAt) return "";
-  
-  // Firestore Timestamp بيكون عنده .toDate()
-  const raw = userData.referralActivatedAt as unknown as { toDate?: () => Date } | Date;
-  const activated = typeof (raw as { toDate?: () => Date }).toDate === "function"
-    ? (raw as { toDate: () => Date }).toDate()
-    : new Date(raw as unknown as string);
+  // ─── طلب كود جديد ─────────────────────────────────────────
+  const handleRequestCode = async () => {
+    if (!canRequest || requesting) return;
+    setRequesting(true);
+    setRequestMsg(null);
+    try {
+      const functions = getFunctions(undefined, "us-central1");
+      const requestCode = httpsCallable(functions, "onReferralRequest");
+      await requestCode({});
+      setRequestMsg({ type: "success", text: "✓ تم تفعيل كود الإحالة الجديد" });
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : "حدث خطأ، حاول مرة أخرى";
+      setRequestMsg({ type: "error", text: message });
+    } finally {
+      setRequesting(false);
+    }
+  };
 
-  const expiry = new Date(activated.getTime() + 48 * 60 * 60 * 1000);
-  return `فعال حتى ${expiry.toLocaleDateString("ar-EG", {
-    weekday: "long",
-    day: "numeric",
-    month: "long",
-    hour: "2-digit",
-    minute: "2-digit",
-  })}`;
-};
+  // ─── تاريخ انتهاء الكود ───────────────────────────────────
+  const getExpiryText = () => {
+    if (!userData?.referralActivatedAt) return "";
+    const raw = userData.referralActivatedAt as unknown as { toDate?: () => Date } | Date;
+    const activated = typeof (raw as { toDate?: () => Date }).toDate === "function"
+      ? (raw as { toDate: () => Date }).toDate()
+      : new Date(raw as unknown as string);
+    const expiry = new Date(activated.getTime() + 48 * 60 * 60 * 1000);
+    return `فعال حتى ${expiry.toLocaleDateString("ar-EG", {
+      weekday: "long", day: "numeric", month: "long", hour: "2-digit", minute: "2-digit",
+    })}`;
+  };
 
   if (loading) {
     return (
@@ -75,15 +108,11 @@ export default function PointsSection({ userData }: PointsSectionProps) {
             <p className="text-white/60 text-sm mt-1">نقطة</p>
           </div>
           <div className="flex flex-col items-center gap-2">
-            <div
-              className="w-16 h-16 rounded-2xl flex items-center justify-center text-3xl shadow-inner"
-              style={{ backgroundColor: tier.bg }}
-            >
+            <div className="w-16 h-16 rounded-2xl flex items-center justify-center text-3xl shadow-inner"
+              style={{ backgroundColor: tier.bg }}>
               {tier.icon}
             </div>
-            <span className="text-xs font-bold" style={{ color: tier.color }}>
-              {tier.label}
-            </span>
+            <span className="text-xs font-bold" style={{ color: tier.color }}>{tier.label}</span>
           </div>
         </div>
       </div>
@@ -120,26 +149,19 @@ export default function PointsSection({ userData }: PointsSectionProps) {
         </div>
         <div className="p-6 flex flex-col gap-4">
 
-          {/* الكود */}
+          {/* الكود والحالة */}
           <div className="flex items-center justify-between gap-4">
             <div className="flex flex-col gap-1">
-              <span
-                className="text-3xl font-extrabold tracking-widest"
+              <span className="text-3xl font-extrabold tracking-widest"
                 style={{
                   color: userData?.referralStatus === "active" ? "#1a3c6e" : "#9ca3af",
                   letterSpacing: "0.3em",
-                }}
-              >
+                }}>
                 {userData?.referralCode ?? "——"}
               </span>
-              <div className="flex items-center gap-2">
-                <span
-                  className="text-xs font-semibold px-2 py-0.5 rounded-full"
-                  style={{
-                    color: referralStatus.color,
-                    backgroundColor: referralStatus.bg,
-                  }}
-                >
+              <div className="flex items-center gap-2 flex-wrap">
+                <span className="text-xs font-semibold px-2 py-0.5 rounded-full"
+                  style={{ color: referralStatus.color, backgroundColor: referralStatus.bg }}>
                   {referralStatus.label}
                 </span>
                 {userData?.referralStatus === "active" && (
@@ -147,7 +169,6 @@ export default function PointsSection({ userData }: PointsSectionProps) {
                 )}
               </div>
             </div>
-
             <div className="flex flex-col items-center gap-1">
               <span className="text-2xl font-bold text-[#1a3c6e]">
                 {userData?.referralUsageCount ?? 0}
@@ -157,26 +178,59 @@ export default function PointsSection({ userData }: PointsSectionProps) {
           </div>
 
           {/* الأزرار */}
-          <div className="flex gap-3">
+          <div className="flex flex-col gap-3">
             {userData?.referralStatus === "active" && (
-              <button
-                onClick={handleCopy}
-                className="flex-1 flex items-center justify-center gap-2 py-3 rounded-xl font-bold text-sm transition-all duration-200"
+              <button onClick={handleCopy}
+                className="w-full flex items-center justify-center gap-2 py-3 rounded-xl font-bold text-sm transition-all duration-200"
                 style={{
                   backgroundColor: copied ? "#dcfce7" : "#1a3c6e",
                   color: copied ? "#16a34a" : "white",
-                }}
-              >
+                }}>
                 {copied ? "✓ تم النسخ" : "📋 نسخ الكود"}
               </button>
             )}
-            {canRequestCode && (
+
+            {/* زر طلب كود جديد */}
+            <div className="flex flex-col gap-2">
               <button
-                className="flex-1 flex items-center justify-center gap-2 py-3 rounded-xl font-bold text-sm border-2 border-[#c9a84c] text-[#c9a84c] hover:bg-[#c9a84c] hover:text-white transition-all duration-200"
-              >
-                🔄 طلب كود جديد
+                onClick={handleRequestCode}
+                disabled={!canRequest || requesting}
+                className="w-full flex items-center justify-center gap-2 py-3 rounded-xl font-bold text-sm transition-all duration-200"
+                style={{
+                  backgroundColor: canRequest ? "#16a34a" : "#e5e7eb",
+                  color: canRequest ? "white" : "#9ca3af",
+                  cursor: canRequest ? "pointer" : "not-allowed",
+                }}>
+                {requesting ? (
+                  <><div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" /> جاري التفعيل...</>
+                ) : (
+                  "🔄 طلب كود إحالة جديد"
+                )}
               </button>
-            )}
+
+              {/* سبب التعطيل */}
+              {disabledReason && (
+                <p className="text-xs text-center text-[#9ca3af]">{disabledReason}</p>
+              )}
+
+              {/* عدد الطلبات المتبقية */}
+              {canRequest && (
+                <p className="text-xs text-center text-[#6b7280]">
+                  متبقي لك <span className="font-bold text-[#1a3c6e]">{remainingRequests}</span> طلب من أصل 3 هذا الشهر
+                </p>
+              )}
+
+              {/* رسالة النتيجة */}
+              {requestMsg && (
+                <div className="flex items-center justify-center gap-2 py-2 px-4 rounded-xl text-sm font-semibold"
+                  style={{
+                    backgroundColor: requestMsg.type === "success" ? "#dcfce7" : "#fee2e2",
+                    color: requestMsg.type === "success" ? "#16a34a" : "#dc2626",
+                  }}>
+                  {requestMsg.text}
+                </div>
+              )}
+            </div>
           </div>
 
         </div>
@@ -187,29 +241,17 @@ export default function PointsSection({ userData }: PointsSectionProps) {
 }
 
 // ─── مكون صف النقاط ───────────────────────────────────────────
-function PointsRow({
-  icon,
-  label,
-  points,
-  positive,
-}: {
-  icon: string;
-  label: string;
-  points: number;
-  positive: boolean;
+function PointsRow({ icon, label, points, positive }: {
+  icon: string; label: string; points: number; positive: boolean;
 }) {
   if (points === 0) return null;
-
   return (
     <div className="flex items-center justify-between px-6 py-4 hover:bg-[#f8fafc] transition-colors">
       <div className="flex items-center gap-3">
         <span className="text-xl">{icon}</span>
         <span className="text-[#374151] text-sm font-medium">{label}</span>
       </div>
-      <span
-        className="text-base font-extrabold"
-        style={{ color: positive ? "#16a34a" : "#dc2626" }}
-      >
+      <span className="text-base font-extrabold" style={{ color: positive ? "#16a34a" : "#dc2626" }}>
         {positive ? "+" : "-"}{points}
       </span>
     </div>
