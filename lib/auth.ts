@@ -11,7 +11,6 @@ import {
 import {
   doc,
   setDoc,
-  getDoc,
   serverTimestamp,
 } from "firebase/firestore";
 import { auth, db } from "./firebase";
@@ -28,8 +27,6 @@ const saveUserToFirestore = async (
   }
 ) => {
   const userRef = doc(db, "users", user.uid);
-  const existing = await getDoc(userRef);
-  if (existing.exists()) return;
 
   await setDoc(userRef, {
     uid: user.uid,
@@ -46,7 +43,7 @@ const saveUserToFirestore = async (
     isActive: true,
     createdAt: serverTimestamp(),
     updatedAt: serverTimestamp(),
-  });
+  }, { merge: true });
 };
 
 // ─── Login ────────────────────────────────────────────────────
