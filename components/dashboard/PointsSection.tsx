@@ -37,13 +37,23 @@ export default function PointsSection({ userData }: PointsSectionProps) {
   };
 
   const getExpiryText = () => {
-    if (!userData?.referralActivatedAt) return "";
-    const activated = new Date(userData.referralActivatedAt);
-    const expiry = new Date(activated.getTime() + 48 * 60 * 60 * 1000);
-    return `فعال حتى ${expiry.toLocaleDateString("ar-EG", {
-      weekday: "long", day: "numeric", month: "long", hour: "2-digit", minute: "2-digit"
-    })}`;
-  };
+  if (!userData?.referralActivatedAt) return "";
+  
+  // Firestore Timestamp بيكون عنده .toDate()
+  const raw = userData.referralActivatedAt as unknown as { toDate?: () => Date } | Date;
+  const activated = typeof (raw as { toDate?: () => Date }).toDate === "function"
+    ? (raw as { toDate: () => Date }).toDate()
+    : new Date(raw as unknown as string);
+
+  const expiry = new Date(activated.getTime() + 48 * 60 * 60 * 1000);
+  return `فعال حتى ${expiry.toLocaleDateString("ar-EG", {
+    weekday: "long",
+    day: "numeric",
+    month: "long",
+    hour: "2-digit",
+    minute: "2-digit",
+  })}`;
+};
 
   if (loading) {
     return (
