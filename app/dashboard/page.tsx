@@ -5,14 +5,19 @@ import { useUser } from "@/hooks/useUser";
 import DashboardLayout from "@/components/dashboard/DashboardLayout";
 
 export default function DashboardPage() {
-  const { loading, isAuthenticated } = useUser();
+  const { userData, loading, isAuthenticated } = useUser();
   const router = useRouter();
 
   useEffect(() => {
-    if (!loading && !isAuthenticated) {
+    if (loading) return;
+    if (!isAuthenticated) {
       router.push("/");
+      return;
     }
-  }, [loading, isAuthenticated, router]);
+    if (!userData?.emailVerified) {
+      router.push("/verify-email");
+    }
+  }, [loading, isAuthenticated, userData, router]);
 
   if (loading) return (
     <div className="min-h-screen flex items-center justify-center bg-[#f0f4f8]">
@@ -20,7 +25,7 @@ export default function DashboardPage() {
     </div>
   );
 
-  if (!isAuthenticated) return null;
+  if (!isAuthenticated || !userData?.emailVerified) return null;
 
   return <DashboardLayout />;
 }
