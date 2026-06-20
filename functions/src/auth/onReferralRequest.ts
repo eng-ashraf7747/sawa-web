@@ -4,8 +4,16 @@ import {
   COLLECTIONS,
   REFERRAL,
   REFERRAL_CODE_STATUS,
-  REFERRAL_REQUEST_STATUS,
 } from "../config/referralConfig";
+
+const generateReferralCode = (): string => {
+  const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
+  let code = "";
+  for (let i = 0; i < REFERRAL.CODE_LENGTH; i++) {
+    code += chars.charAt(Math.floor(Math.random() * chars.length));
+  }
+  return code;
+};
 
 export const onReferralRequest = functions.https.onCall(async (data, context) => {
   if (!context.auth) {
@@ -27,12 +35,10 @@ export const onReferralRequest = functions.https.onCall(async (data, context) =>
 
   // التحقق من كود Active
   if (userData.referralStatus === REFERRAL_CODE_STATUS.ACTIVE) {
-    throw new functions.https.HttpsError("failed-precondition", "لديك كود إحالة فعال حالياً");
-  }
-
-  // التحقق من طلب Pending
-  if (userData.referralStatus === REFERRAL_CODE_STATUS.PENDING) {
-    throw new functions.https.HttpsError("failed-precondition", "لديك طلب قيد المراجعة");
+    throw new functions.https.HttpsError(
+      "failed-precondition",
+      "لديك كود إحالة فعال حالياً"
+    );
   }
 
   // التحقق من عدد الطلبات في الشهر
@@ -47,27 +53,23 @@ export const onReferralRequest = functions.https.onCall(async (data, context) =>
     );
   }
 
-  // إنشاء الطلب
-  const batch = db.batch();
+  // توليد كود جديد وتفعيله فوراً
+  const newCode = generateReferralCode();
+  const activatedAt = new Date();
 
-  batch.update(userRef, {
-    referralStatus: REFERRAL_CODE_STATUS.PENDING,
+  await userRef.update({
+    referralCode: newCode,
+    referralStatus: REFERRAL_CODE_STATUS.ACTIVE,
+    referralActivatedAt: activatedAt,
+    referralUsageCount: 0,
     referralRequestCount: requestCount + 1,
     referralRequestMonth: currentMonth,
-    referralRequestedAt: FieldValue.serverTimestamp(),
     updatedAt: FieldValue.serverTimestamp(),
   });
 
-  const requestRef = db.collection(COLLECTIONS.REFERRAL_CODE_REQUESTS).doc();
-  batch.set(requestRef, {
-    uid,
-    status: REFERRAL_REQUEST_STATUS.PENDING,
-    requestedAt: FieldValue.serverTimestamp(),
-    displayName: userData.displayName || "",
-    email: userData.email || "",
-  });
-
-  await batch.commit();
-
-  return {success: true, message: "تم إرسال طلبك للمراجعة"};
+  return {
+    success: true,
+    message: "تم تفعيل كود الإحالة الجديد",
+    referralCode: newCode,
+  };
 });
