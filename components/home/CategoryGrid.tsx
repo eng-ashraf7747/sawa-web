@@ -25,7 +25,17 @@ function CategoryCard({ category }: { category: Category }) {
 }
 
 // ─── Category Grid ─────────────────────────────────────────
-export default function CategoryGrid() {
+interface CategoryGridProps {
+  columns?: 2 | 3 | 4;
+}
+
+const colsClass: Record<number, string> = {
+  2: "grid-cols-2",
+  3: "grid-cols-3",
+  4: "grid-cols-2 sm:grid-cols-3 lg:grid-cols-4",
+};
+
+export default function CategoryGrid({ columns = 2 }: CategoryGridProps) {
   const { categories, loading, error } = useActiveCategories();
 
   if (loading) {
@@ -34,8 +44,8 @@ export default function CategoryGrid() {
         <div className="flex items-center justify-between mb-5">
           <h2 className="text-[#1a3c6e] text-lg font-extrabold">الفئات المتاحة</h2>
         </div>
-        <div className="grid grid-cols-2 gap-4">
-          {[...Array(4)].map((_, i) => (
+        <div className={`grid ${colsClass[columns]} gap-4`}>
+          {[...Array(columns === 4 ? 8 : 4)].map((_, i) => (
             <div key={i} className="bg-white rounded-2xl p-5 border border-[#e8eaed] animate-pulse">
               <div className="flex flex-col items-center">
                 <div className="w-10 h-10 bg-slate-100 rounded-xl mb-3" />
@@ -75,7 +85,7 @@ export default function CategoryGrid() {
           {categories.length}
         </span>
       </div>
-      <div className="grid grid-cols-2 gap-4">
+      <div className={`grid ${colsClass[columns]} gap-4`}>
         {categories.map((cat) => (
           <CategoryCard key={cat.id} category={cat} />
         ))}

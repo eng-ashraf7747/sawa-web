@@ -3,11 +3,11 @@
 "use client";
 import { useState } from "react";
 import { useUser } from "@/hooks/useUser";
-import { mockDeals, mockRequests } from "@/lib/mockData";
+import { mockRequests } from "@/lib/mockData";
+import { useActiveCategories } from "@/hooks/useCategories";
 import Sidebar from "./Sidebar";
 import DashboardHeader from "./DashboardHeader";
 import StatsBar from "./StatsBar";
-import DealsSection from "./DealsSection";
 import RequestsSection from "./RequestsSection";
 import PointsSection from "./PointsSection";
 import CategoryGrid from "@/components/home/CategoryGrid";
@@ -18,15 +18,17 @@ function MainContent({
   activeSection,
   onSectionChange,
   userData,
+  categoriesCount,
 }: {
   activeSection: ActiveSection;
   onSectionChange: (section: string) => void;
   userData: ReturnType<typeof useUser>["userData"];
+  categoriesCount: number;
 }) {
   const statsBar = (
     <StatsBar
       userData={userData}
-      dealsCount={mockDeals.length}
+      categoriesCount={categoriesCount}
       requestsCount={mockRequests.length}
       onCardClick={onSectionChange}
       activeSection={activeSection}
@@ -34,7 +36,12 @@ function MainContent({
   );
 
   if (activeSection === "deals") {
-    return <>{statsBar}<DealsSection deals={mockDeals} /></>;
+    return (
+      <>
+        {statsBar}
+        <CategoryGrid columns={4} />
+      </>
+    );
   }
   if (activeSection === "requests") {
     return <>{statsBar}<RequestsSection requests={mockRequests} /></>;
@@ -51,12 +58,11 @@ function MainContent({
     );
   }
 
-  // ─── Home: الفئات الحقيقية + الطلبات ───────────────────
   return (
     <>
       {statsBar}
       <div className="flex gap-6">
-        <CategoryGrid />
+        <CategoryGrid columns={2} />
         <RequestsSection requests={mockRequests} />
       </div>
     </>
@@ -65,6 +71,7 @@ function MainContent({
 
 export default function DashboardLayout() {
   const { userData, loading } = useUser();
+  const { categories } = useActiveCategories();
   const [activePage, setActivePage] = useState("home");
 
   if (loading) {
@@ -92,6 +99,7 @@ export default function DashboardLayout() {
             activeSection={activePage}
             onSectionChange={setActivePage}
             userData={userData}
+            categoriesCount={categories.length}
           />
         </main>
       </div>
