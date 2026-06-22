@@ -1,3 +1,5 @@
+// C:\sawa-web\app\dashboard\page.tsx
+
 "use client";
 import { useEffect } from "react";
 import { useRouter } from "next/navigation";
@@ -16,6 +18,11 @@ export default function DashboardPage() {
     }
     if (!userData?.emailVerified) {
       router.push("/verify-email");
+      return;
+    }
+    if (userData?.role === "admin") {
+      router.push("/admin/overview");
+      return;
     }
   }, [loading, isAuthenticated, userData, router]);
 
@@ -26,6 +33,7 @@ export default function DashboardPage() {
   );
 
   if (!isAuthenticated || !userData?.emailVerified) return null;
+  if (userData?.role === "admin") return null;
 
   return <DashboardLayout />;
 }
