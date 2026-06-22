@@ -1,3 +1,5 @@
+// C:\sawa-web\components\dashboard\DashboardLayout.tsx
+
 "use client";
 import { useState } from "react";
 import { useUser } from "@/hooks/useUser";
@@ -8,6 +10,7 @@ import StatsBar from "./StatsBar";
 import DealsSection from "./DealsSection";
 import RequestsSection from "./RequestsSection";
 import PointsSection from "./PointsSection";
+import CategoryGrid from "@/components/home/CategoryGrid";
 
 type ActiveSection = "home" | "deals" | "requests" | "points" | "profile" | string;
 
@@ -47,11 +50,13 @@ function MainContent({
       </>
     );
   }
+
+  // ─── Home: الفئات الحقيقية + الطلبات ───────────────────
   return (
     <>
       {statsBar}
       <div className="flex gap-6">
-        <DealsSection deals={mockDeals} />
+        <CategoryGrid />
         <RequestsSection requests={mockRequests} />
       </div>
     </>
