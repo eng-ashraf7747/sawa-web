@@ -16,24 +16,25 @@ export default function DashboardPage() {
       router.push("/");
       return;
     }
-    if (!userData?.emailVerified) {
+    if (!userData) return; // انتظر حتى تكتمل بيانات Firestore
+    if (!userData.emailVerified) {
       router.push("/verify-email");
       return;
     }
-    if (userData?.role === "admin") {
+    if (userData.role === "admin") {
       router.push("/admin/overview");
       return;
     }
   }, [loading, isAuthenticated, userData, router]);
 
-  if (loading) return (
+  if (loading || !userData) return (
     <div className="min-h-screen flex items-center justify-center bg-[#f0f4f8]">
       <div className="w-12 h-12 border-4 border-[#1a3c6e] border-t-[#c9a84c] rounded-full animate-spin" />
     </div>
   );
 
-  if (!isAuthenticated || !userData?.emailVerified) return null;
-  if (userData?.role === "admin") return null;
+  if (!isAuthenticated || !userData.emailVerified) return null;
+  if (userData.role === "admin") return null;
 
   return <DashboardLayout />;
 }
