@@ -1,9 +1,11 @@
+// C:\sawa-web\components\dashboard\StatsBar.tsx
+
 "use client";
 import { User } from "@/types";
 
 interface StatsBarProps {
   userData: User | null;
-  dealsCount: number;
+  categoriesCount: number;
   requestsCount: number;
   activeSection: string;
   onCardClick: (section: string) => void;
@@ -53,7 +55,7 @@ const StatCard = ({ label, value, icon, sectionId, activeSection, onClick }: Sta
 
 export default function StatsBar({
   userData,
-  dealsCount,
+  categoriesCount,
   requestsCount,
   activeSection,
   onCardClick,
@@ -78,7 +80,7 @@ export default function StatsBar({
       />
       <StatCard
         label="العروض المتاحة"
-        value={dealsCount}
+        value={categoriesCount}
         icon="🏷️"
         sectionId="deals"
         activeSection={activeSection}
