@@ -36,7 +36,6 @@ const saveUserToFirestore = async (
     photoUrl: user.photoURL || null,
     city: "fayoum",
     address: null,
-    role: "user",
     tier: "bronze",
     referredBy: extra?.referralCode || null,
     emailVerified: false,
