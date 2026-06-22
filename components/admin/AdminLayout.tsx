@@ -2,7 +2,7 @@
 
 "use client";
 
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useUser } from "@/hooks/useUser";
@@ -96,13 +96,32 @@ interface AdminLayoutProps {
 
 export default function AdminLayout({ children, title }: AdminLayoutProps) {
   const [sidebarOpen, setSidebarOpen] = useState(true);
+  const [menuOpen, setMenuOpen] = useState(false);
+  const [loggingOut, setLoggingOut] = useState(false);
+  const menuRef = useRef<HTMLDivElement>(null);
   const pathname = usePathname();
   const { userData } = useUser();
   const router = useRouter();
 
+  // ─── إغلاق الـ dropdown عند الضغط خارجه ──────────────
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
+        setMenuOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
   const handleLogout = async () => {
-    await signOut(auth);
-    router.push("/");
+    setLoggingOut(true);
+    try {
+      await signOut(auth);
+      router.push("/");
+    } finally {
+      setLoggingOut(false);
+    }
   };
 
   return (
@@ -176,25 +195,61 @@ export default function AdminLayout({ children, title }: AdminLayoutProps) {
           })}
         </nav>
 
-        {/* Admin Info */}
-        <div className="border-t border-white/10 p-4">
-          {sidebarOpen ? (
-            <div className="flex items-center gap-3">
-              <div className="w-8 h-8 rounded-full bg-[#1a3c6e] flex items-center justify-center text-[#c9a84c] font-bold text-sm flex-shrink-0">
-                {userData?.displayName?.charAt(0) ?? "A"}
-              </div>
-              <div className="flex-1 min-w-0">
-                <p className="text-sm font-medium text-white truncate">
-                  {userData?.displayName ?? "المدير"}
-                </p>
-                <p className="text-xs text-white/50 truncate">{userData?.email}</p>
-              </div>
-            </div>
-          ) : (
-            <div className="w-8 h-8 rounded-full bg-[#1a3c6e] flex items-center justify-center text-[#c9a84c] font-bold text-sm mx-auto">
-              {userData?.displayName?.charAt(0) ?? "A"}
+        {/* ─── Admin Info + Dropdown ────────────────────── */}
+        <div className="border-t border-white/10 p-3 relative" ref={menuRef}>
+
+          {/* Dropdown Menu */}
+          {menuOpen && (
+            <div className={`
+              absolute bottom-full mb-2 bg-[#0f172a] rounded-xl shadow-xl border border-white/10 overflow-hidden
+              ${sidebarOpen ? "left-3 right-3" : "left-1 right-1"}
+            `}>
+              <button
+                onClick={handleLogout}
+                disabled={loggingOut}
+                className="w-full flex items-center gap-3 px-4 py-3 text-sm text-red-400 hover:bg-red-500/10 transition-colors disabled:opacity-50"
+              >
+                {loggingOut ? (
+                  <svg className="w-4 h-4 animate-spin" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+                      d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                  </svg>
+                ) : (
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+                      d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+                  </svg>
+                )}
+                {loggingOut ? "جارٍ الخروج..." : "تسجيل الخروج"}
+              </button>
             </div>
           )}
+
+          {/* Admin Button */}
+          <button
+            onClick={() => setMenuOpen(!menuOpen)}
+            className="w-full flex items-center gap-3 p-2 rounded-lg hover:bg-white/10 transition-colors"
+          >
+            <div className="w-8 h-8 rounded-full bg-[#1a3c6e] flex items-center justify-center text-[#c9a84c] font-bold text-sm flex-shrink-0">
+              {userData?.displayName?.charAt(0) ?? "A"}
+            </div>
+            {sidebarOpen && (
+              <>
+                <div className="flex-1 min-w-0 text-right">
+                  <p className="text-sm font-medium text-white truncate">
+                    {userData?.displayName ?? "المدير"}
+                  </p>
+                  <p className="text-xs text-white/50 truncate">{userData?.email}</p>
+                </div>
+                <svg
+                  className={`w-4 h-4 text-white/40 flex-shrink-0 transition-transform duration-200 ${menuOpen ? "rotate-180" : ""}`}
+                  fill="none" stroke="currentColor" viewBox="0 0 24 24"
+                >
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 15l7-7 7 7" />
+                </svg>
+              </>
+            )}
+          </button>
         </div>
       </aside>
 
@@ -202,18 +257,8 @@ export default function AdminLayout({ children, title }: AdminLayoutProps) {
       <div className={`flex-1 flex flex-col transition-all duration-300 ${sidebarOpen ? "mr-64" : "mr-16"}`}>
 
         {/* Header */}
-        <header className="sticky top-0 z-20 bg-white border-b border-slate-200 px-6 py-4 flex items-center justify-between shadow-sm">
+        <header className="sticky top-0 z-20 bg-white border-b border-slate-200 px-6 py-4 shadow-sm">
           <h1 className="text-lg font-bold text-[#0f172a]">{title}</h1>
-          <button
-            onClick={handleLogout}
-            className="flex items-center gap-2 text-sm text-slate-500 hover:text-red-500 transition-colors px-3 py-1.5 rounded-lg hover:bg-red-50"
-          >
-            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
-                d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
-            </svg>
-            تسجيل الخروج
-          </button>
         </header>
 
         {/* Page Content */}
