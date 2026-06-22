@@ -1,3 +1,5 @@
+// C:\sawa-web\lib\auth.ts
+
 import {
   signInWithEmailAndPassword,
   createUserWithEmailAndPassword,
@@ -17,28 +19,47 @@ import { auth, db } from "./firebase";
 
 const googleProvider = new GoogleAuthProvider();
 
-// ─── حفظ البيانات الأساسية فقط — المنطق في Cloud Functions ───
-const saveUserToFirestore = async (
+// ─── حفظ مستخدم جديد بالإيميل — role: user دائماً ───────────
+const saveNewEmailUser = async (
   user: User,
-  extra?: {
-    displayName?: string;
-    phone?: string;
+  extra: {
+    displayName: string;
+    phone: string;
     referralCode?: string;
   }
 ) => {
   const userRef = doc(db, "users", user.uid);
-
   await setDoc(userRef, {
     uid: user.uid,
-    displayName: extra?.displayName || user.displayName || "",
+    displayName: extra.displayName,
     email: user.email || "",
-    phone: extra?.phone || null,
+    phone: extra.phone,
+    photoUrl: null,
+    city: "fayoum",
+    address: null,
+    role: "user",
+    tier: "bronze",
+    referredBy: extra.referralCode || null,
+    emailVerified: false,
+    isActive: true,
+    createdAt: serverTimestamp(),
+    updatedAt: serverTimestamp(),
+  }, { merge: true });
+};
+
+// ─── حفظ مستخدم Google — لا يكتب role (يحافظ على الموجود) ───
+const saveGoogleUser = async (user: User) => {
+  const userRef = doc(db, "users", user.uid);
+  await setDoc(userRef, {
+    uid: user.uid,
+    displayName: user.displayName || "",
+    email: user.email || "",
+    phone: null,
     photoUrl: user.photoURL || null,
     city: "fayoum",
     address: null,
     tier: "bronze",
-    referredBy: extra?.referralCode || null,
-    emailVerified: false,
+    emailVerified: true,
     isActive: true,
     createdAt: serverTimestamp(),
     updatedAt: serverTimestamp(),
@@ -57,24 +78,16 @@ export const registerWithEmail = async (
   phone: string,
   referralCode?: string
 ) => {
-  const credential = await createUserWithEmailAndPassword(
-    auth,
-    email,
-    password
-  );
+  const credential = await createUserWithEmailAndPassword(auth, email, password);
   await sendEmailVerification(credential.user);
-  await saveUserToFirestore(credential.user, {
-    displayName,
-    phone,
-    referralCode,
-  });
+  await saveNewEmailUser(credential.user, { displayName, phone, referralCode });
   return credential;
 };
 
 // ─── Google Sign-In ───────────────────────────────────────────
 export const loginWithGoogle = async () => {
   const credential = await signInWithPopup(auth, googleProvider);
-  await saveUserToFirestore(credential.user);
+  await saveGoogleUser(credential.user);
   return credential;
 };
 
