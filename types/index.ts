@@ -1,3 +1,5 @@
+// C:\sawa-web\types\index.ts
+
 export interface User {
   uid: string;
   email: string;
@@ -43,3 +45,6 @@ export interface Service {
 }
 
 export type AuthMode = "login" | "register" | "forgotPassword";
+
+export type { Deal, CreateDealInput, DealCategory, DealStatus } from "./deal";
+export { DEAL_CATEGORY_LABELS, DEAL_STATUS_LABELS } from "./deal";
