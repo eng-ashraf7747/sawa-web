@@ -2,13 +2,120 @@
 
 "use client";
 
+import { useState } from "react";
 import { useAdminGuard } from "@/hooks/useAdminGuard";
+import { useAllCategories } from "@/hooks/useCategories";
+import { useAllDeals } from "@/hooks/useDeals";
+import { addDeal, updateDeal } from "@/lib/deals";
+import { Deal, CreateDealInput } from "@/types/deal";
+import { Category } from "@/types/category";
 import AdminLayout from "@/components/admin/AdminLayout";
+import DealCard from "@/components/admin/DealCard";
+import DealForm from "@/components/admin/DealForm";
 
+type ModalMode = "add" | "edit" | null;
+
+// ─── Deals Panel (per category) ───────────────────────────
+function DealsPanel({
+  category,
+  onAdd,
+  onEdit,
+}: {
+  category: Category;
+  onAdd: (cat: Category) => void;
+  onEdit: (deal: Deal) => void;
+}) {
+  const { deals, loading, error } = useAllDeals(category.id);
+
+  return (
+    <div className="bg-white rounded-xl shadow-sm border border-slate-100 p-5 mb-4">
+
+      {/* ─── Category Header ─────────────────────────────── */}
+      <div className="flex items-center justify-between mb-4">
+        <div className="flex items-center gap-2">
+          <span className="text-2xl">{category.emoji}</span>
+          <div>
+            <h3 className="text-sm font-bold text-slate-800">{category.name}</h3>
+            <p className="text-xs text-slate-400">{deals.length} عرض</p>
+          </div>
+        </div>
+        <button
+          onClick={() => onAdd(category)}
+          className="flex items-center gap-1.5 bg-[#1a3c6e] text-white text-xs px-3 py-1.5 rounded-lg hover:bg-[#1a3c6e]/90 transition"
+        >
+          <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+          </svg>
+          إضافة عرض
+        </button>
+      </div>
+
+      {/* ─── Error ───────────────────────────────────────── */}
+      {error && (
+        <p className="text-xs text-red-500 bg-red-50 px-3 py-2 rounded-lg mb-3">{error}</p>
+      )}
+
+      {/* ─── Loading ─────────────────────────────────────── */}
+      {loading ? (
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
+          {[...Array(2)].map((_, i) => (
+            <div key={i} className="bg-slate-50 rounded-xl h-48 animate-pulse" />
+          ))}
+        </div>
+      ) : deals.length === 0 ? (
+        <div className="flex flex-col items-center py-8 text-slate-400">
+          <span className="text-3xl mb-2">🏷️</span>
+          <p className="text-xs">لا توجد عروض — اضغط "إضافة عرض"</p>
+        </div>
+      ) : (
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
+          {deals.map((deal) => (
+            <DealCard key={deal.id} deal={deal} onEdit={onEdit} />
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ─── Admin Deals Page ──────────────────────────────────────
 export default function AdminDealsPage() {
-  const { isAuthorized, loading } = useAdminGuard();
+  const { isAuthorized, loading: authLoading } = useAdminGuard();
+  const { categories, loading: catsLoading } = useAllCategories();
+  const [modalMode, setModalMode] = useState<ModalMode>(null);
+  const [selectedCategory, setSelectedCategory] = useState<Category | null>(null);
+  const [editTarget, setEditTarget] = useState<Deal | null>(null);
 
-  if (loading) {
+  const handleAdd = async (data: CreateDealInput) => {
+    await addDeal(data);
+    setModalMode(null);
+    setSelectedCategory(null);
+  };
+
+  const handleEdit = async (data: CreateDealInput) => {
+    if (!editTarget) return;
+    await updateDeal(editTarget.id, data);
+    setModalMode(null);
+    setEditTarget(null);
+  };
+
+  const openAdd = (category: Category) => {
+    setSelectedCategory(category);
+    setModalMode("add");
+  };
+
+  const openEdit = (deal: Deal) => {
+    setEditTarget(deal);
+    setModalMode("edit");
+  };
+
+  const closeModal = () => {
+    setModalMode(null);
+    setSelectedCategory(null);
+    setEditTarget(null);
+  };
+
+  if (authLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-[#f8fafc]">
         <div className="w-12 h-12 border-4 border-[#1a3c6e] border-t-[#c9a84c] rounded-full animate-spin" />
@@ -20,37 +127,67 @@ export default function AdminDealsPage() {
 
   return (
     <AdminLayout title="إدارة العروض">
-      <div className="bg-white rounded-xl shadow-sm border border-slate-100 p-6">
 
-        {/* ─── Header Row ──────────────────────────────────── */}
-        <div className="flex items-center justify-between mb-6">
-          <div>
-            <h2 className="text-base font-bold text-[#0f172a]">العروض</h2>
-            <p className="text-xs text-slate-400 mt-0.5">إدارة عروض منصة سوا</p>
-          </div>
-          <button
-            disabled
-            className="flex items-center gap-2 bg-[#1a3c6e] text-white text-sm px-4 py-2 rounded-lg opacity-50 cursor-not-allowed"
-            title="قريباً"
-          >
-            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-            </svg>
-            إضافة عرض
-          </button>
-        </div>
-
-        {/* ─── Empty State ─────────────────────────────────── */}
-        <div className="flex flex-col items-center justify-center py-16 text-slate-400">
-          <svg className="w-14 h-14 mb-4 text-slate-200" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5}
-              d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z" />
-          </svg>
-          <p className="text-sm font-medium">لا توجد عروض بعد</p>
-          <p className="text-xs mt-1">سيتم تفعيل إضافة العروض في الخطوة القادمة</p>
-        </div>
-
+      {/* ─── Header ──────────────────────────────────────── */}
+      <div className="mb-6">
+        <h2 className="text-base font-bold text-[#0f172a]">العروض</h2>
+        <p className="text-xs text-slate-400 mt-0.5">
+          إدارة عروض كل فئة بشكل منفصل
+        </p>
       </div>
+
+      {/* ─── Loading Categories ───────────────────────────── */}
+      {catsLoading ? (
+        <div className="space-y-4">
+          {[...Array(2)].map((_, i) => (
+            <div key={i} className="bg-white rounded-xl h-32 animate-pulse border border-slate-100" />
+          ))}
+        </div>
+      ) : categories.length === 0 ? (
+        <div className="bg-white rounded-xl border border-slate-100 p-16 flex flex-col items-center text-slate-400">
+          <span className="text-5xl mb-4">🗂️</span>
+          <p className="text-sm font-medium">لا توجد فئات بعد</p>
+          <p className="text-xs mt-1">أضف فئات أولاً من صفحة إدارة الفئات</p>
+        </div>
+      ) : (
+        categories.map((cat) => (
+          <DealsPanel
+            key={cat.id}
+            category={cat}
+            onAdd={openAdd}
+            onEdit={openEdit}
+          />
+        ))
+      )}
+
+      {/* ─── Modal ───────────────────────────────────────── */}
+      {modalMode && (selectedCategory || editTarget) && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md p-6 max-h-[90vh] overflow-y-auto">
+            <div className="flex items-center justify-between mb-6">
+              <h3 className="text-base font-bold text-[#0f172a]">
+                {modalMode === "add" ? "إضافة عرض جديد" : "تعديل العرض"}
+              </h3>
+              <button
+                onClick={closeModal}
+                className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-slate-100 text-slate-400 transition"
+              >
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+            <DealForm
+              categoryId={modalMode === "add" ? selectedCategory!.id : editTarget!.categoryId}
+              initialValues={editTarget ?? undefined}
+              onSubmit={modalMode === "add" ? handleAdd : handleEdit}
+              onCancel={closeModal}
+              submitLabel={modalMode === "add" ? "إضافة العرض" : "حفظ التعديلات"}
+            />
+          </div>
+        </div>
+      )}
+
     </AdminLayout>
   );
 }
