@@ -12,7 +12,7 @@ function CategoryCard({ category }: { category: Category }) {
 
   return (
     <div
-      onClick={() => router.push(`/deals/${category.id}`)}
+      onClick={() => window.location.href = `/deals/${category.id}`}
       className="bg-white rounded-2xl p-5 border border-[#e8eaed] shadow-sm hover:shadow-md hover:border-[#c9a84c] transition-all duration-200 cursor-pointer group"
     >
       <div className="flex flex-col items-center text-center">
