@@ -4,6 +4,7 @@
 
 import { useState } from "react";
 import { CreateDealInput } from "@/types/deal";
+import ImageUpload from "@/components/admin/ImageUpload";
 
 interface DealFormProps {
   categoryId: string;
@@ -42,7 +43,7 @@ export default function DealForm({
         title: title.trim(),
         description: description.trim(),
         discount: discount.trim(),
-        imageUrl: imageUrl.trim() || undefined,
+        imageUrl: imageUrl || undefined,
         externalUrl: externalUrl.trim() || undefined,
         order,
         isActive: initialValues?.isActive ?? false,
@@ -100,19 +101,12 @@ export default function DealForm({
         />
       </div>
 
-      {/* ─── رابط الصورة ─────────────────────────────────── */}
-      <div>
-        <label className="block text-sm font-medium text-slate-700 mb-1">
-          رابط الصورة
-        </label>
-        <input
-          type="text"
-          value={imageUrl}
-          onChange={(e) => setImageUrl(e.target.value)}
-          placeholder="https://..."
-          className="w-full px-4 py-2.5 rounded-lg border border-slate-200 text-sm text-slate-800 focus:outline-none focus:border-[#1a3c6e] focus:ring-1 focus:ring-[#1a3c6e] transition"
-        />
-      </div>
+      {/* ─── الصورة ──────────────────────────────────────── */}
+      <ImageUpload
+        currentUrl={imageUrl}
+        onUpload={setImageUrl}
+        folder="deals"
+      />
 
       {/* ─── رابط خارجي ──────────────────────────────────── */}
       <div>
