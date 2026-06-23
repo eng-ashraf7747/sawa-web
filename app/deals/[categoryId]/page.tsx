@@ -69,7 +69,7 @@ export default function DealsPage({
 
   return (
     <div className="min-h-screen bg-[#f0f4f8]" dir="rtl">
-      <div className="bg-white border-b border-[#e8eaed] px-6 py-4 flex items-center gap-4 sticky top-0 z-10 shadow-sm">
+      <div className="bg-white border-b border-[#e8eaed] px-4 md:px-6 py-4 flex items-center gap-4 sticky top-0 z-10 shadow-sm">
         <button
           onClick={() => router.back()}
           className="w-9 h-9 flex items-center justify-center rounded-xl bg-[#f0f4f8] hover:bg-[#e8eaed] transition"
@@ -101,7 +101,7 @@ export default function DealsPage({
           </div>
         )}
         {deals.length > 0 && (
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
             {deals.map((deal) => (
               <DealCard key={deal.id} deal={deal} />
             ))}

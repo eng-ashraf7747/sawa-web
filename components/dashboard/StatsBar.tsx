@@ -33,19 +33,19 @@ const StatCard = ({ label, value, icon, sectionId, activeSection, onClick }: Sta
   return (
     <button
       onClick={() => onClick(sectionId)}
-      className={`flex-1 bg-white rounded-2xl p-5 flex items-center gap-4 shadow-sm border-t-4 transition-all duration-200 cursor-pointer text-right
+      className={`flex-1 bg-white rounded-2xl p-3 md:p-5 flex items-center gap-2 md:gap-4 shadow-sm border-t-4 transition-all duration-200 cursor-pointer text-right
         ${isActive
           ? "border border-[#c9a84c] border-t-[#c9a84c] shadow-md scale-[1.02]"
           : "border border-[#e8eaed] border-t-[#c9a84c] hover:border-[#c9a84c] hover:shadow-md hover:scale-[1.02]"
         }`}
     >
-      <div className={`w-12 h-12 rounded-xl flex items-center justify-center text-2xl flex-shrink-0 transition-colors
+      <div className={`w-8 h-8 md:w-12 md:h-12 rounded-xl flex items-center justify-center text-lg md:text-2xl flex-shrink-0 transition-colors
         ${isActive ? "bg-[#c9a84c]/20" : "bg-[#f0f4f8]"}`}>
         {icon}
       </div>
       <div>
-        <p className="text-[#6b7280] text-xs mb-1">{label}</p>
-        <p className={`text-2xl font-extrabold ${isActive ? "text-[#c9a84c]" : "text-[#1a3c6e]"}`}>
+        <p className="text-[#6b7280] text-[10px] md:text-xs mb-0.5 md:mb-1">{label}</p>
+        <p className={`text-lg md:text-2xl font-extrabold ${isActive ? "text-[#c9a84c]" : "text-[#1a3c6e]"}`}>
           {value}
         </p>
       </div>
@@ -61,7 +61,7 @@ export default function StatsBar({
   onCardClick,
 }: StatsBarProps) {
   return (
-    <div className="flex gap-4 mb-8">
+    <div className="grid grid-cols-2 md:flex gap-3 md:gap-4 mb-6 md:mb-8">
       <StatCard
         label="إجمالي النقاط"
         value={userData?.points ?? 0}

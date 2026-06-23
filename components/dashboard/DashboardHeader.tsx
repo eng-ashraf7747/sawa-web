@@ -1,3 +1,5 @@
+// C:\sawa-web\components\dashboard\DashboardHeader.tsx
+
 "use client";
 import Image from "next/image";
 import { User } from "@/types";
@@ -17,11 +19,12 @@ const pageNames: Record<string, string> = {
 
 export default function DashboardHeader({ userData, activePage }: DashboardHeaderProps) {
   return (
-    <header className="h-16 bg-[#1a3c6e] flex items-center justify-between px-8 shadow-md overflow-visible relative z-10">
+    <header className="h-16 bg-[#1a3c6e] flex items-center justify-between px-4 md:px-8 shadow-md overflow-visible relative z-10">
+
       {/* ─── Breadcrumb ─────────────────────────────────── */}
       <div className="flex items-center gap-2 text-white/70 text-sm">
-        <span>سوا</span>
-        <span>/</span>
+        <span className="hidden sm:inline">سوا</span>
+        <span className="hidden sm:inline">/</span>
         <span className="text-white font-semibold">
           {pageNames[activePage] ?? "الرئيسية"}
         </span>
@@ -29,13 +32,12 @@ export default function DashboardHeader({ userData, activePage }: DashboardHeade
 
       {/* ─── صورة سوا في المنتصف ─────────────────────────── */}
       <div className="flex-1 flex justify-center items-end translate-y-2">
-
         <Image
           src="/Sawa-paner.png"
           alt="سوا معاً"
           height={90}
           width={200}
-          className="object-contain opacity-90"
+          className="object-contain opacity-90 w-32 md:w-[200px]"
           onError={(e) => {
             (e.target as HTMLImageElement).style.display = "none";
           }}
@@ -43,7 +45,7 @@ export default function DashboardHeader({ userData, activePage }: DashboardHeade
       </div>
 
       {/* ─── Left Actions ───────────────────────────────── */}
-      <div className="flex items-center gap-4">
+      <div className="flex items-center gap-2 md:gap-4">
         {/* الإشعارات */}
         <button className="relative w-9 h-9 flex items-center justify-center rounded-full hover:bg-white/10 transition-colors cursor-pointer">
           <span className="text-lg">🔔</span>
@@ -55,7 +57,7 @@ export default function DashboardHeader({ userData, activePage }: DashboardHeade
           <div className="w-8 h-8 rounded-full bg-white/20 flex items-center justify-center text-sm">
             👤
           </div>
-          <span className="text-white text-sm font-semibold">
+          <span className="hidden sm:inline text-white text-sm font-semibold">
             {userData?.displayName ?? "مستخدم"}
           </span>
         </div>
