@@ -1,3 +1,5 @@
+// C:\sawa-web\components\dashboard\Sidebar.tsx
+
 "use client";
 import { useState } from "react";
 import Image from "next/image";
@@ -67,99 +69,164 @@ export default function Sidebar({ userData, activePage, onNavigate }: SidebarPro
   };
 
   return (
-    <aside
-      className="w-[260px] min-h-screen flex flex-col"
-      style={{ background: "linear-gradient(180deg, #1a3c6e 0%, #0f2447 100%)" }}
-    >
-      {/* ─── Logo ─────────────────────────────────────────── */}
-      <div className="flex justify-center items-center py-6 border-b border-white/10">
-        <div className="w-12 h-12 rounded-full bg-white flex items-center justify-center shadow-lg">
-          <Image
-            src="/Sawa-logo.png"
-            alt="SAWA"
-            width={140}
-            height={80}
-            className="object-contain"
-            onError={(e) => {
-              (e.target as HTMLImageElement).style.display = "none";
-            }}
-          />
-        </div>
-      </div>
-
-      {/* ─── User Profile ─────────────────────────────────── */}
-      <div className="flex flex-col items-center py-6 px-4 border-b border-white/10">
-        <div
-          className="w-16 h-16 rounded-full bg-white/20 flex items-center justify-center text-2xl mb-3"
-          style={{ border: `2px solid ${tierColor}` }}
-        >
-          👤
-        </div>
-        <p className="font-bold text-base" style={{ color: tierColor }}>
-          {userData?.displayName ?? "مستخدم"}
-        </p>
-        <span
-          className="text-xs px-3 py-1 rounded-full mt-1 font-semibold"
-          style={{ backgroundColor: `${tierColor}22`, color: tierColor }}
-        >
-          {tierName} ⭐
-        </span>
-        <p className="text-white/60 text-xs mt-2">
-          {userData?.points ?? 0} نقطة
-        </p>
-      </div>
-
-      {/* ─── Navigation ───────────────────────────────────── */}
-      <nav className="flex-1 px-3 py-4 flex flex-col gap-1">
-        <NavItem id="home" icon="🏠" label="الرئيسية" onClick={() => onNavigate("home")} />
-
-        {/* الخدمات */}
-        <button
-          onClick={() => setServicesOpen(!servicesOpen)}
-          className="w-full flex items-center justify-between px-4 py-2.5 rounded-xl text-white/70 hover:bg-white/10 hover:text-white transition-all cursor-pointer"
-        >
-          <span className="flex items-center gap-3">
-            <span>🎯</span>
-            <span className="text-sm">الخدمات</span>
-          </span>
-          <span className="text-xs">{servicesOpen ? "▲" : "▼"}</span>
-        </button>
-        {servicesOpen && (
-          <div className="flex flex-col gap-0.5">
-            <NavItem id="deals" label="العروض المتاحة" onClick={() => onNavigate("deals")} isChild />
-            <NavItem id="requests" label="الخدمات المطلوبة" onClick={() => onNavigate("requests")} isChild />
+    <>
+      {/* ─── Desktop Sidebar (md+) ────────────────────────── */}
+      <aside
+        className="hidden md:flex w-[260px] min-h-screen flex-col"
+        style={{ background: "linear-gradient(180deg, #1a3c6e 0%, #0f2447 100%)" }}
+      >
+        {/* ─── Logo ───────────────────────────────────────── */}
+        <div className="flex justify-center items-center py-6 border-b border-white/10">
+          <div className="w-12 h-12 rounded-full bg-white flex items-center justify-center shadow-lg">
+            <Image
+              src="/Sawa-logo.png"
+              alt="SAWA"
+              width={140}
+              height={80}
+              className="object-contain"
+              onError={(e) => {
+                (e.target as HTMLImageElement).style.display = "none";
+              }}
+            />
           </div>
-        )}
+        </div>
 
-        {/* حسابي */}
-        <button
-          onClick={() => setAccountOpen(!accountOpen)}
-          className="w-full flex items-center justify-between px-4 py-2.5 rounded-xl text-white/70 hover:bg-white/10 hover:text-white transition-all cursor-pointer"
-        >
-          <span className="flex items-center gap-3">
-            <span>👤</span>
-            <span className="text-sm">حسابي</span>
-          </span>
-          <span className="text-xs">{accountOpen ? "▲" : "▼"}</span>
-        </button>
-        {accountOpen && (
-          <div className="flex flex-col gap-0.5">
-            <NavItem id="profile" label="بياناتي" onClick={() => onNavigate("profile")} isChild />
-            <NavItem id="points" label="سجل نقاطي" onClick={() => onNavigate("points")} isChild />
+        {/* ─── User Profile ───────────────────────────────── */}
+        <div className="flex flex-col items-center py-6 px-4 border-b border-white/10">
+          <div
+            className="w-16 h-16 rounded-full bg-white/20 flex items-center justify-center text-2xl mb-3"
+            style={{ border: `2px solid ${tierColor}` }}
+          >
+            👤
           </div>
-        )}
-      </nav>
+          <p className="font-bold text-base" style={{ color: tierColor }}>
+            {userData?.displayName ?? "مستخدم"}
+          </p>
+          <span
+            className="text-xs px-3 py-1 rounded-full mt-1 font-semibold"
+            style={{ backgroundColor: `${tierColor}22`, color: tierColor }}
+          >
+            {tierName} ⭐
+          </span>
+          <p className="text-white/60 text-xs mt-2">
+            {userData?.points ?? 0} نقطة
+          </p>
+        </div>
 
-      {/* ─── Logout ───────────────────────────────────────── */}
-      <div className="px-3 py-4 border-t border-white/10">
+        {/* ─── Navigation ─────────────────────────────────── */}
+        <nav className="flex-1 px-3 py-4 flex flex-col gap-1">
+          <NavItem id="home" icon="🏠" label="الرئيسية" onClick={() => onNavigate("home")} />
+
+          <button
+            onClick={() => setServicesOpen(!servicesOpen)}
+            className="w-full flex items-center justify-between px-4 py-2.5 rounded-xl text-white/70 hover:bg-white/10 hover:text-white transition-all cursor-pointer"
+          >
+            <span className="flex items-center gap-3">
+              <span>🎯</span>
+              <span className="text-sm">الخدمات</span>
+            </span>
+            <span className="text-xs">{servicesOpen ? "▲" : "▼"}</span>
+          </button>
+          {servicesOpen && (
+            <div className="flex flex-col gap-0.5">
+              <NavItem id="deals" label="العروض المتاحة" onClick={() => onNavigate("deals")} isChild />
+              <NavItem id="requests" label="الخدمات المطلوبة" onClick={() => onNavigate("requests")} isChild />
+            </div>
+          )}
+
+          <button
+            onClick={() => setAccountOpen(!accountOpen)}
+            className="w-full flex items-center justify-between px-4 py-2.5 rounded-xl text-white/70 hover:bg-white/10 hover:text-white transition-all cursor-pointer"
+          >
+            <span className="flex items-center gap-3">
+              <span>👤</span>
+              <span className="text-sm">حسابي</span>
+            </span>
+            <span className="text-xs">{accountOpen ? "▲" : "▼"}</span>
+          </button>
+          {accountOpen && (
+            <div className="flex flex-col gap-0.5">
+              <NavItem id="profile" label="بياناتي" onClick={() => onNavigate("profile")} isChild />
+              <NavItem id="points" label="سجل نقاطي" onClick={() => onNavigate("points")} isChild />
+            </div>
+          )}
+        </nav>
+
+        {/* ─── Logout ─────────────────────────────────────── */}
+        <div className="px-3 py-4 border-t border-white/10">
+          <button
+            onClick={handleLogout}
+            className="w-full flex items-center gap-3 px-4 py-2.5 rounded-xl text-red-300 hover:bg-red-500/20 hover:text-red-200 transition-all cursor-pointer"
+          >
+            <span>🚪</span>
+            <span className="text-sm">تسجيل الخروج</span>
+          </button>
+        </div>
+      </aside>
+
+      {/* ─── Mobile Bottom Navigation ─────────────────────── */}
+      <nav
+        className="md:hidden fixed bottom-0 left-0 right-0 z-50 flex items-center justify-around px-2 py-2 border-t border-white/10"
+        style={{ background: "linear-gradient(180deg, #1a3c6e 0%, #0f2447 100%)" }}
+      >
+        <button
+          onClick={() => onNavigate("home")}
+          className={`flex flex-col items-center gap-0.5 px-3 py-1.5 rounded-xl transition-all ${
+            activePage === "home" ? "text-[#c9a84c]" : "text-white/60"
+          }`}
+        >
+          <span className="text-xl">🏠</span>
+          <span className="text-[10px]">الرئيسية</span>
+        </button>
+
+        <button
+          onClick={() => onNavigate("deals")}
+          className={`flex flex-col items-center gap-0.5 px-3 py-1.5 rounded-xl transition-all ${
+            activePage === "deals" ? "text-[#c9a84c]" : "text-white/60"
+          }`}
+        >
+          <span className="text-xl">🏷️</span>
+          <span className="text-[10px]">العروض</span>
+        </button>
+
+        <button
+          onClick={() => onNavigate("requests")}
+          className={`flex flex-col items-center gap-0.5 px-3 py-1.5 rounded-xl transition-all ${
+            activePage === "requests" ? "text-[#c9a84c]" : "text-white/60"
+          }`}
+        >
+          <span className="text-xl">📋</span>
+          <span className="text-[10px]">طلباتي</span>
+        </button>
+
+        <button
+          onClick={() => onNavigate("points")}
+          className={`flex flex-col items-center gap-0.5 px-3 py-1.5 rounded-xl transition-all ${
+            activePage === "points" ? "text-[#c9a84c]" : "text-white/60"
+          }`}
+        >
+          <span className="text-xl">🏆</span>
+          <span className="text-[10px]">نقاطي</span>
+        </button>
+
+        <button
+          onClick={() => onNavigate("profile")}
+          className={`flex flex-col items-center gap-0.5 px-3 py-1.5 rounded-xl transition-all ${
+            activePage === "profile" ? "text-[#c9a84c]" : "text-white/60"
+          }`}
+        >
+          <span className="text-xl">👤</span>
+          <span className="text-[10px]">حسابي</span>
+        </button>
+
         <button
           onClick={handleLogout}
-          className="w-full flex items-center gap-3 px-4 py-2.5 rounded-xl text-red-300 hover:bg-red-500/20 hover:text-red-200 transition-all cursor-pointer"
+          className="flex flex-col items-center gap-0.5 px-3 py-1.5 rounded-xl transition-all text-red-300"
         >
-          <span>🚪</span>
-          <span className="text-sm">تسجيل الخروج</span>
+          <span className="text-xl">🚪</span>
+          <span className="text-[10px]">خروج</span>
         </button>
-      </div>
-    </aside>
+      </nav>
+    </>
   );
 }

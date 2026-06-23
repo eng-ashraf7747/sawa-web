@@ -94,7 +94,7 @@ export default function DashboardLayout() {
       />
       <div className="flex-1 flex flex-col min-h-screen overflow-hidden">
         <DashboardHeader userData={userData} activePage={activePage} />
-        <main className="flex-1 p-8 flex flex-col gap-6">
+        <main className="flex-1 p-4 md:p-8 flex flex-col gap-6 pb-24 md:pb-8">
           <MainContent
             activeSection={activePage}
             onSectionChange={setActivePage}
