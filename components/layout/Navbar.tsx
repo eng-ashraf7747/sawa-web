@@ -1,3 +1,5 @@
+// C:\sawa-web\components\layout\Navbar.tsx
+
 "use client";
 import Image from "next/image";
 import { useCity } from "@/hooks/useCity";
@@ -14,16 +16,16 @@ export default function Navbar({ onLoginClick }: NavbarProps) {
   return (
     <>
       {/* ANNOUNCEMENT BAR */}
-      <div className="bg-[#0d2447] text-white/75 text-center py-2 px-6 text-xs tracking-wide">
+      <div className="bg-[#0d2447] text-white/75 text-center py-2 px-4 text-xs tracking-wide">
         🌍 SAWA متاحة دلوقتي في{" "}
         <span className="text-[#f0d980] font-semibold">{selectedCity.nameAr}</span>{" "}
         — وقريباً في محافظات أكتر
       </div>
 
       {/* NAV */}
-      <nav className="sticky top-0 z-50 bg-white/95 backdrop-blur-md border-b border-[#e8eaed] px-12 h-16 flex items-center justify-between gap-6">
+      <nav className="sticky top-0 z-50 bg-white/95 backdrop-blur-md border-b border-[#e8eaed] px-4 md:px-12 h-16 flex items-center justify-between gap-3 md:gap-6">
         <a href="/" className="flex items-center flex-shrink-0">
-          <Image src="/Sawa-logo.png" alt="SAWA" width={120} height={42} priority />
+          <Image src="/Sawa-logo.png" alt="SAWA" width={100} height={36} priority className="w-20 md:w-[120px]" />
         </a>
 
         <div className="hidden md:flex items-center gap-1 flex-1 justify-center">
@@ -43,7 +45,7 @@ export default function Navbar({ onLoginClick }: NavbarProps) {
         <div className="flex items-center gap-2 flex-shrink-0" dir="ltr">
           <button
             onClick={() => setCityOpen(!cityOpen)}
-            className="flex items-center gap-1.5 border border-[#e8eaed] rounded-full px-3 py-1.5 text-xs text-[#111827] bg-white hover:border-[#1a3c6e] transition-colors cursor-pointer"
+            className="hidden sm:flex items-center gap-1.5 border border-[#e8eaed] rounded-full px-3 py-1.5 text-xs text-[#111827] bg-white hover:border-[#1a3c6e] transition-colors cursor-pointer"
           >
             <svg className="w-3 h-3 text-[#6b7280]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
               <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7z"/>
@@ -54,7 +56,7 @@ export default function Navbar({ onLoginClick }: NavbarProps) {
               <path d="M6 9l6 6 6-6"/>
             </svg>
           </button>
-          <div className="w-px h-5 bg-[#e8eaed]"/>
+          <div className="hidden sm:block w-px h-5 bg-[#e8eaed]"/>
           {user ? (
             <span className="text-sm font-semibold text-[#1a3c6e]">
               {user.displayName || user.email}
@@ -62,7 +64,7 @@ export default function Navbar({ onLoginClick }: NavbarProps) {
           ) : (
             <button
               onClick={onLoginClick}
-              className="text-sm text-[#111827] px-4 py-1.5 rounded-lg hover:bg-[#f8f9fb] hover:text-[#1a3c6e] transition-all font-semibold cursor-pointer"
+              className="text-sm text-[#111827] px-3 md:px-4 py-1.5 rounded-lg hover:bg-[#f8f9fb] hover:text-[#1a3c6e] transition-all font-semibold cursor-pointer"
             >
               Login
             </button>
@@ -74,7 +76,7 @@ export default function Navbar({ onLoginClick }: NavbarProps) {
       {cityOpen && (
         <div className="fixed inset-0 z-40" onClick={() => setCityOpen(false)}>
           <div
-            className="absolute top-16 left-12 bg-white rounded-2xl shadow-2xl p-5 min-w-[220px]"
+            className="absolute top-16 left-4 md:left-12 bg-white rounded-2xl shadow-2xl p-5 min-w-[220px]"
             onClick={e => e.stopPropagation()}
           >
             <h3 className="text-xs font-bold text-[#6b7280] uppercase tracking-widest mb-3">
