@@ -2,13 +2,19 @@
 
 "use client";
 
+import { useRouter } from "next/navigation";
 import { useActiveCategories } from "@/hooks/useCategories";
 import { Category } from "@/types/category";
 
 // ─── Category Card ─────────────────────────────────────────
 function CategoryCard({ category }: { category: Category }) {
+  const router = useRouter();
+
   return (
-    <div className="bg-white rounded-2xl p-5 border border-[#e8eaed] shadow-sm hover:shadow-md hover:border-[#c9a84c] transition-all duration-200 cursor-pointer group">
+    <div
+      onClick={() => router.push(`/deals/${category.id}`)}
+      className="bg-white rounded-2xl p-5 border border-[#e8eaed] shadow-sm hover:shadow-md hover:border-[#c9a84c] transition-all duration-200 cursor-pointer group"
+    >
       <div className="flex flex-col items-center text-center">
         <span className="text-4xl mb-3 group-hover:scale-110 transition-transform duration-200">
           {category.emoji}
