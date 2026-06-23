@@ -82,6 +82,7 @@ function DealsPanel({
 export default function AdminDealsPage() {
   const { isAuthorized, loading: authLoading } = useAdminGuard();
   const { categories, loading: catsLoading } = useAllCategories();
+  console.log("categories:", categories, "catsLoading:", catsLoading);
   const [modalMode, setModalMode] = useState<ModalMode>(null);
   const [selectedCategory, setSelectedCategory] = useState<Category | null>(null);
   const [editTarget, setEditTarget] = useState<Deal | null>(null);
@@ -190,5 +191,4 @@ export default function AdminDealsPage() {
 
     </AdminLayout>
   );
-  console.log("categories:", categories, "loading:", catsLoading);
 }
