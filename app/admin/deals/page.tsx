@@ -190,4 +190,5 @@ export default function AdminDealsPage() {
 
     </AdminLayout>
   );
+  console.log("categories:", categories, "loading:", catsLoading);
 }
