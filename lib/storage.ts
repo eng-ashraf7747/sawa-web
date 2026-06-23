@@ -11,7 +11,12 @@ export const uploadImage = async (
   onProgress?: (progress: number) => void
 ): Promise<string> => {
   const storageRef = ref(storage, path);
-  const uploadTask = uploadBytesResumable(storageRef, file);
+
+  const metadata = {
+    cacheControl: "public, max-age=604800", // 7 أيام
+  };
+
+  const uploadTask = uploadBytesResumable(storageRef, file, metadata);
 
   return new Promise((resolve, reject) => {
     uploadTask.on(
@@ -35,7 +40,6 @@ export const deleteImage = async (url: string): Promise<void> => {
     const storageRef = ref(storage, url);
     await deleteObject(storageRef);
   } catch {
-    // الصورة غير موجودة — لا نوقف التطبيق
     console.warn("لم يتم العثور على الصورة للحذف");
   }
 };
