@@ -71,6 +71,9 @@ export default function DealCard({ deal, onEdit }: DealCardProps) {
       {/* ─── Content ─────────────────────────────────────── */}
       <div className="p-3 md:p-4">
         <h3 className="text-sm font-bold text-slate-800 mb-1 truncate">{deal.title}</h3>
+        {deal.vendorName && (
+          <p className="text-xs text-[#1a3c6e] font-medium mb-1">🏪 {deal.vendorName}</p>
+        )}
         <p className="text-xs text-slate-500 mb-2 line-clamp-2">{deal.description}</p>
         <p className="text-sm font-bold text-[#c9a84c] mb-3">{deal.discount}</p>
 
