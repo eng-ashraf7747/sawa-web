@@ -4,7 +4,7 @@
 
 import { useState } from "react";
 import { Deal, DEAL_STATUS_LABELS } from "@/types/deal";
-import { toggleDealActive, deleteDeal } from "@/lib/deals";
+import { toggleDealActive, deleteDeal, approveDeal, rejectDeal } from "@/lib/deals";
 
 interface DealCardProps {
   deal: Deal;
@@ -12,17 +12,39 @@ interface DealCardProps {
 }
 
 export default function DealCard({ deal, onEdit }: DealCardProps) {
-  const [toggling, setToggling] = useState(false);
+  const [processing, setProcessing] = useState(false);
   const [deleting, setDeleting] = useState(false);
 
   const handleToggle = async () => {
-    setToggling(true);
+    setProcessing(true);
     try {
       await toggleDealActive(deal.id, deal.status === "active");
     } catch {
       console.error("خطأ في تغيير حالة العرض");
     } finally {
-      setToggling(false);
+      setProcessing(false);
+    }
+  };
+
+  const handleApprove = async () => {
+    setProcessing(true);
+    try {
+      await approveDeal(deal.id);
+    } catch {
+      console.error("خطأ في الموافقة");
+    } finally {
+      setProcessing(false);
+    }
+  };
+
+  const handleReject = async () => {
+    setProcessing(true);
+    try {
+      await rejectDeal(deal.id);
+    } catch {
+      console.error("خطأ في الرفض");
+    } finally {
+      setProcessing(false);
     }
   };
 
@@ -38,14 +60,39 @@ export default function DealCard({ deal, onEdit }: DealCardProps) {
     }
   };
 
+  // ─── شريط الحالة ─────────────────────────────────────────
+  const statusBar = {
+    pending: {
+      bg: "bg-amber-50 border-t border-amber-200",
+      text: "text-amber-700",
+      label: "في انتظار الموافقة",
+    },
+    active: {
+      bg: "bg-green-50 border-t border-green-200",
+      text: "text-green-700",
+      label: "نشط",
+    },
+    inactive: {
+      bg: "bg-slate-50 border-t border-slate-200",
+      text: "text-slate-500",
+      label: "معطل",
+    },
+    rejected: {
+      bg: "bg-red-50 border-t border-red-200",
+      text: "text-red-500",
+      label: "مرفوض",
+    },
+    draft: {
+      bg: "bg-slate-50 border-t border-slate-200",
+      text: "text-slate-400",
+      label: "مسودة",
+    },
+  };
+
+  const bar = statusBar[deal.status];
+
   return (
-    <div className={`
-      relative bg-white rounded-xl shadow-sm border-2 transition-all duration-200 overflow-hidden
-      ${deal.status === "active" ? "border-green-400"
-        : deal.status === "pending" ? "border-amber-300"
-        : deal.status === "rejected" ? "border-red-300"
-        : "border-slate-100"}
-    `}>
+    <div className="relative bg-white rounded-xl shadow-sm border border-slate-100 overflow-hidden transition-all duration-200 hover:shadow-md">
 
       {/* ─── Image ───────────────────────────────────────── */}
       {deal.imageUrl ? (
@@ -56,52 +103,20 @@ export default function DealCard({ deal, onEdit }: DealCardProps) {
         </div>
       )}
 
-      {/* ─── Status Badge ────────────────────────────────── */}
-      <div className={`
-        absolute top-2 left-2 text-[10px] font-bold px-2 py-0.5 rounded-full
-        ${deal.status === "active" ? "bg-green-100 text-green-700"
-          : deal.status === "pending" ? "bg-amber-100 text-amber-700"
-          : deal.status === "rejected" ? "bg-red-100 text-red-500"
-          : deal.status === "draft" ? "bg-slate-100 text-slate-500"
-          : "bg-slate-100 text-slate-400"}
-      `}>
-        {DEAL_STATUS_LABELS[deal.status]}
-      </div>
-
       {/* ─── Content ─────────────────────────────────────── */}
       <div className="p-3 md:p-4">
         <h3 className="text-sm font-bold text-slate-800 mb-1 truncate">{deal.title}</h3>
-        {deal.vendorName && (
-          <p className="text-xs text-[#1a3c6e] font-medium mb-1">🏪 {deal.vendorName}</p>
-        )}
         <p className="text-xs text-slate-500 mb-2 line-clamp-2">{deal.description}</p>
         <p className="text-sm font-bold text-[#c9a84c] mb-3">{deal.discount}</p>
 
         {/* ─── Actions ─────────────────────────────────── */}
         <div className="flex gap-2">
-          {(deal.status === "active" || deal.status === "inactive") && (
-            <button
-              onClick={handleToggle}
-              disabled={toggling}
-              className={`
-                flex-1 text-xs font-medium py-1.5 rounded-lg transition-all disabled:opacity-50
-                ${deal.status === "active"
-                  ? "bg-red-50 text-red-500 hover:bg-red-100"
-                  : "bg-green-50 text-green-600 hover:bg-green-100"
-                }
-              `}
-            >
-              {toggling ? "..." : deal.status === "active" ? "تعطيل" : "تفعيل"}
-            </button>
-          )}
-
           <button
             onClick={() => onEdit(deal)}
             className="flex-1 text-xs font-medium py-1.5 rounded-lg bg-slate-50 text-slate-600 hover:bg-slate-100 transition-all"
           >
             تعديل
           </button>
-
           <button
             onClick={handleDelete}
             disabled={deleting}
@@ -121,6 +136,62 @@ export default function DealCard({ deal, onEdit }: DealCardProps) {
           </button>
         </div>
       </div>
+
+      {/* ─── Status Bar ──────────────────────────────────── */}
+      <div className={`${bar.bg} px-3 py-2 flex items-center justify-between gap-2`}>
+        <div className="flex items-center gap-1.5 min-w-0">
+          {deal.vendorName && (
+            <span className={`text-xs font-medium truncate ${bar.text}`}>
+              🏪 {deal.vendorName}
+            </span>
+          )}
+          {!deal.vendorName && (
+            <span className={`text-xs font-medium ${bar.text}`}>
+              {bar.label}
+            </span>
+          )}
+        </div>
+
+        <div className="flex items-center gap-1.5 flex-shrink-0">
+          {deal.status === "pending" && (
+            <>
+              <button
+                onClick={handleApprove}
+                disabled={processing}
+                className="text-[10px] font-bold px-2 py-1 rounded-lg bg-green-500 text-white hover:bg-green-600 disabled:opacity-50 transition"
+              >
+                {processing ? "..." : "موافقة"}
+              </button>
+              <button
+                onClick={handleReject}
+                disabled={processing}
+                className="text-[10px] font-bold px-2 py-1 rounded-lg bg-red-500 text-white hover:bg-red-600 disabled:opacity-50 transition"
+              >
+                {processing ? "..." : "رفض"}
+              </button>
+            </>
+          )}
+          {deal.status === "active" && (
+            <button
+              onClick={handleToggle}
+              disabled={processing}
+              className="text-[10px] font-bold px-2 py-1 rounded-lg bg-red-50 text-red-500 hover:bg-red-100 disabled:opacity-50 transition"
+            >
+              {processing ? "..." : "تعطيل"}
+            </button>
+          )}
+          {deal.status === "inactive" && (
+            <button
+              onClick={handleToggle}
+              disabled={processing}
+              className="text-[10px] font-bold px-2 py-1 rounded-lg bg-green-50 text-green-600 hover:bg-green-100 disabled:opacity-50 transition"
+            >
+              {processing ? "..." : "تفعيل"}
+            </button>
+          )}
+        </div>
+      </div>
+
     </div>
   );
 }
