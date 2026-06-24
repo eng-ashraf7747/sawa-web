@@ -17,7 +17,9 @@ type ModalMode = "add" | "edit" | null;
 export default function VendorDealsPage() {
   const { isAuthorized, loading: authLoading, vendorId } = useVendorGuard();
   const { userData } = useUser();
-  const { deals, loading: dealsLoading } = useVendorDeals(vendorId ?? "");
+  const { deals, loading: dealsLoading } = useVendorDeals(
+    isAuthorized && vendorId ? vendorId : ""
+  );
   const { categories } = useActiveCategories();
   const [modalMode, setModalMode] = useState<ModalMode>(null);
   const [editTarget, setEditTarget] = useState<Deal | null>(null);
@@ -96,8 +98,11 @@ export default function VendorDealsPage() {
               >
                 <div className="flex items-center gap-3 min-w-0">
                   {deal.imageUrl ? (
-                    <img src={deal.imageUrl} alt={deal.title}
-                      className="w-10 h-10 rounded-lg object-cover flex-shrink-0" />
+                    <img
+                      src={deal.imageUrl}
+                      alt={deal.title}
+                      className="w-10 h-10 rounded-lg object-cover flex-shrink-0"
+                    />
                   ) : (
                     <div className="w-10 h-10 rounded-lg bg-slate-200 flex items-center justify-center flex-shrink-0">
                       <span className="text-lg">🏷️</span>
@@ -142,8 +147,10 @@ export default function VendorDealsPage() {
               <h3 className="text-base font-bold text-[#0f172a]">
                 {modalMode === "add" ? "إضافة عرض جديد" : "تعديل العرض"}
               </h3>
-              <button onClick={closeModal}
-                className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-slate-100 text-slate-400 transition">
+              <button
+                onClick={closeModal}
+                className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-slate-100 text-slate-400 transition"
+              >
                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
                 </svg>
