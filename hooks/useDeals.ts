@@ -4,7 +4,12 @@
 
 import { useState, useEffect } from "react";
 import { Deal } from "@/types/deal";
-import { streamDealsByCategory, streamActiveDealsByCategory } from "@/lib/deals";
+import {
+  streamDealsByCategory,
+  streamActiveDealsByCategory,
+  streamPendingDeals,
+  streamVendorDeals,
+} from "@/lib/deals";
 
 interface UseDealsReturn {
   deals: Deal[];
@@ -20,20 +25,11 @@ export const useAllDeals = (categoryId: string): UseDealsReturn => {
 
   useEffect(() => {
     if (!categoryId) return;
-
     const unsubscribe = streamDealsByCategory(
       categoryId,
-      (data) => {
-        setDeals(data);
-        setLoading(false);
-      },
-      (err) => {
-        console.error("خطأ في جلب العروض:", err);
-        setError("حدث خطأ في جلب العروض");
-        setLoading(false);
-      }
+      (data) => { setDeals(data); setLoading(false); },
+      (err) => { console.error("خطأ في جلب العروض:", err); setError("حدث خطأ في جلب العروض"); setLoading(false); }
     );
-
     return () => unsubscribe();
   }, [categoryId]);
 
@@ -48,22 +44,49 @@ export const useActiveDeals = (categoryId: string): UseDealsReturn => {
 
   useEffect(() => {
     if (!categoryId) return;
-
     const unsubscribe = streamActiveDealsByCategory(
       categoryId,
-      (data) => {
-        setDeals(data);
-        setLoading(false);
-      },
-      (err) => {
-        console.error("خطأ في جلب العروض النشطة:", err);
-        setError("حدث خطأ في جلب العروض");
-        setLoading(false);
-      }
+      (data) => { setDeals(data); setLoading(false); },
+      (err) => { console.error("خطأ في جلب العروض النشطة:", err); setError("حدث خطأ في جلب العروض"); setLoading(false); }
     );
-
     return () => unsubscribe();
   }, [categoryId]);
+
+  return { deals, loading, error };
+};
+
+// ─── Admin: العروض المعلقة ────────────────────────────────
+export const usePendingDeals = (): UseDealsReturn => {
+  const [deals, setDeals] = useState<Deal[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    const unsubscribe = streamPendingDeals(
+      (data) => { setDeals(data); setLoading(false); },
+      (err) => { console.error("خطأ في جلب العروض المعلقة:", err); setError("حدث خطأ في جلب العروض"); setLoading(false); }
+    );
+    return () => unsubscribe();
+  }, []);
+
+  return { deals, loading, error };
+};
+
+// ─── Vendor: عروض المورد ─────────────────────────────────
+export const useVendorDeals = (vendorId: string): UseDealsReturn => {
+  const [deals, setDeals] = useState<Deal[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!vendorId) return;
+    const unsubscribe = streamVendorDeals(
+      vendorId,
+      (data) => { setDeals(data); setLoading(false); },
+      (err) => { console.error("خطأ في جلب عروض المورد:", err); setError("حدث خطأ في جلب العروض"); setLoading(false); }
+    );
+    return () => unsubscribe();
+  }, [vendorId]);
 
   return { deals, loading, error };
 };

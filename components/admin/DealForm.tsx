@@ -12,6 +12,8 @@ interface DealFormProps {
   onSubmit: (data: CreateDealInput) => Promise<void>;
   onCancel: () => void;
   submitLabel?: string;
+  isVendor?: boolean;
+  vendorId?: string;
 }
 
 export default function DealForm({
@@ -20,12 +22,15 @@ export default function DealForm({
   onSubmit,
   onCancel,
   submitLabel = "إضافة",
+  isVendor = false,
+  vendorId,
 }: DealFormProps) {
   const [title, setTitle] = useState(initialValues?.title ?? "");
   const [description, setDescription] = useState(initialValues?.description ?? "");
   const [discount, setDiscount] = useState(initialValues?.discount ?? "");
   const [imageUrl, setImageUrl] = useState(initialValues?.imageUrl ?? "");
   const [externalUrl, setExternalUrl] = useState(initialValues?.externalUrl ?? "");
+  const [linkedVendorId, setLinkedVendorId] = useState(initialValues?.vendorId ?? "");
   const [order, setOrder] = useState(initialValues?.order ?? 1);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -40,13 +45,14 @@ export default function DealForm({
     try {
       await onSubmit({
         categoryId,
+        vendorId: isVendor ? vendorId ?? null : linkedVendorId.trim() || null,
         title: title.trim(),
         description: description.trim(),
         discount: discount.trim(),
         imageUrl: imageUrl || undefined,
         externalUrl: externalUrl.trim() || undefined,
         order,
-        isActive: initialValues?.isActive ?? false,
+        status: isVendor ? "pending" : (initialValues?.status ?? "active"),
         expiresAt: null,
       });
     } catch {
@@ -122,19 +128,47 @@ export default function DealForm({
         />
       </div>
 
-      {/* ─── الترتيب ──────────────────────────────────────── */}
-      <div>
-        <label className="block text-sm font-medium text-slate-700 mb-1">
-          الترتيب
-        </label>
-        <input
-          type="number"
-          value={order}
-          onChange={(e) => setOrder(Number(e.target.value))}
-          min={1}
-          className="w-24 px-4 py-2.5 rounded-lg border border-slate-200 text-sm text-slate-800 focus:outline-none focus:border-[#1a3c6e] focus:ring-1 focus:ring-[#1a3c6e] transition"
-        />
-      </div>
+      {/* ─── ربط بمورد (للأدمن فقط) ─────────────────────── */}
+      {!isVendor && (
+        <div>
+          <label className="block text-sm font-medium text-slate-700 mb-1">
+            ربط بمورد <span className="text-slate-400 text-xs">(اختياري)</span>
+          </label>
+          <input
+            type="text"
+            value={linkedVendorId}
+            onChange={(e) => setLinkedVendorId(e.target.value)}
+            placeholder="uid المورد"
+            className="w-full px-4 py-2.5 rounded-lg border border-slate-200 text-sm text-slate-800 focus:outline-none focus:border-[#1a3c6e] focus:ring-1 focus:ring-[#1a3c6e] transition"
+          />
+          <p className="text-xs text-slate-400 mt-1">اتركه فارغاً للعروض غير المرتبطة بمورد</p>
+        </div>
+      )}
+
+      {/* ─── الترتيب (للأدمن فقط) ───────────────────────── */}
+      {!isVendor && (
+        <div>
+          <label className="block text-sm font-medium text-slate-700 mb-1">
+            الترتيب
+          </label>
+          <input
+            type="number"
+            value={order}
+            onChange={(e) => setOrder(Number(e.target.value))}
+            min={1}
+            className="w-24 px-4 py-2.5 rounded-lg border border-slate-200 text-sm text-slate-800 focus:outline-none focus:border-[#1a3c6e] focus:ring-1 focus:ring-[#1a3c6e] transition"
+          />
+        </div>
+      )}
+
+      {/* ─── إشعار للمورد ────────────────────────────────── */}
+      {isVendor && (
+        <div className="bg-amber-50 border border-amber-200 rounded-lg px-4 py-3">
+          <p className="text-xs text-amber-700 font-medium">
+            ⏳ سيتم مراجعة العرض من قبل الأدمن قبل نشره للمستخدمين
+          </p>
+        </div>
+      )}
 
       {/* ─── Error ────────────────────────────────────────── */}
       {error && (

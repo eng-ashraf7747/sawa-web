@@ -44,18 +44,34 @@ export const deleteDeal = async (id: string): Promise<void> => {
   await deleteDoc(doc(db, COLLECTION, id));
 };
 
-// ─── Toggle Active ────────────────────────────────────────
+// ─── Toggle Active/Inactive (Admin) ───────────────────────
 export const toggleDealActive = async (
   id: string,
   current: boolean
 ): Promise<void> => {
   await updateDoc(doc(db, COLLECTION, id), {
-    isActive: !current,
+    status: current ? "inactive" : "active",
     updatedAt: serverTimestamp(),
   });
 };
 
-// ─── Stream Deals by Category (Admin) ────────────────────
+// ─── Approve Deal (Admin) ─────────────────────────────────
+export const approveDeal = async (id: string): Promise<void> => {
+  await updateDoc(doc(db, COLLECTION, id), {
+    status: "active",
+    updatedAt: serverTimestamp(),
+  });
+};
+
+// ─── Reject Deal (Admin) ──────────────────────────────────
+export const rejectDeal = async (id: string): Promise<void> => {
+  await updateDoc(doc(db, COLLECTION, id), {
+    status: "rejected",
+    updatedAt: serverTimestamp(),
+  });
+};
+
+// ─── Stream All Deals by Category (Admin) ────────────────
 export const streamDealsByCategory = (
   categoryId: string,
   callback: (deals: Deal[]) => void,
@@ -66,7 +82,25 @@ export const streamDealsByCategory = (
     where("categoryId", "==", categoryId),
     orderBy("order", "asc")
   );
+  return onSnapshot(
+    q,
+    (snapshot) => {
+      callback(snapshot.docs.map((d) => ({ id: d.id, ...d.data() } as Deal)));
+    },
+    onError
+  );
+};
 
+// ─── Stream Pending Deals (Admin) ────────────────────────
+export const streamPendingDeals = (
+  callback: (deals: Deal[]) => void,
+  onError: (error: Error) => void
+) => {
+  const q = query(
+    dealsRef(),
+    where("status", "==", "pending"),
+    orderBy("createdAt", "asc")
+  );
   return onSnapshot(
     q,
     (snapshot) => {
@@ -85,10 +119,29 @@ export const streamActiveDealsByCategory = (
   const q = query(
     dealsRef(),
     where("categoryId", "==", categoryId),
-    where("isActive", "==", true),
+    where("status", "==", "active"),
     orderBy("order", "asc")
   );
+  return onSnapshot(
+    q,
+    (snapshot) => {
+      callback(snapshot.docs.map((d) => ({ id: d.id, ...d.data() } as Deal)));
+    },
+    onError
+  );
+};
 
+// ─── Stream Vendor Deals (Vendor) ────────────────────────
+export const streamVendorDeals = (
+  vendorId: string,
+  callback: (deals: Deal[]) => void,
+  onError: (error: Error) => void
+) => {
+  const q = query(
+    dealsRef(),
+    where("vendorId", "==", vendorId),
+    orderBy("createdAt", "asc")
+  );
   return onSnapshot(
     q,
     (snapshot) => {

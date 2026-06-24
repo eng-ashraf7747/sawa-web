@@ -3,7 +3,7 @@
 "use client";
 
 import { useState } from "react";
-import { Deal } from "@/types/deal";
+import { Deal, DEAL_STATUS_LABELS } from "@/types/deal";
 import { toggleDealActive, deleteDeal } from "@/lib/deals";
 
 interface DealCardProps {
@@ -18,7 +18,7 @@ export default function DealCard({ deal, onEdit }: DealCardProps) {
   const handleToggle = async () => {
     setToggling(true);
     try {
-      await toggleDealActive(deal.id, deal.isActive);
+      await toggleDealActive(deal.id, deal.status === "active");
     } catch {
       console.error("خطأ في تغيير حالة العرض");
     } finally {
@@ -41,58 +41,60 @@ export default function DealCard({ deal, onEdit }: DealCardProps) {
   return (
     <div className={`
       relative bg-white rounded-xl shadow-sm border-2 transition-all duration-200 overflow-hidden
-      ${deal.isActive ? "border-green-400" : "border-slate-100"}
+      ${deal.status === "active" ? "border-green-400"
+        : deal.status === "pending" ? "border-amber-300"
+        : deal.status === "rejected" ? "border-red-300"
+        : "border-slate-100"}
     `}>
 
       {/* ─── Image ───────────────────────────────────────── */}
       {deal.imageUrl ? (
-        <img
-          src={deal.imageUrl}
-          alt={deal.title}
-          className="w-full h-32 object-cover"
-        />
+        <img src={deal.imageUrl} alt={deal.title} className="w-full h-32 object-cover" />
       ) : (
         <div className="w-full h-32 bg-slate-100 flex items-center justify-center">
           <span className="text-4xl">🏷️</span>
         </div>
       )}
 
-      {/* ─── Badge ───────────────────────────────────────── */}
+      {/* ─── Status Badge ────────────────────────────────── */}
       <div className={`
         absolute top-2 left-2 text-[10px] font-bold px-2 py-0.5 rounded-full
-        ${deal.isActive
-          ? "bg-green-100 text-green-700"
-          : "bg-slate-100 text-slate-400"
-        }
+        ${deal.status === "active" ? "bg-green-100 text-green-700"
+          : deal.status === "pending" ? "bg-amber-100 text-amber-700"
+          : deal.status === "rejected" ? "bg-red-100 text-red-500"
+          : deal.status === "draft" ? "bg-slate-100 text-slate-500"
+          : "bg-slate-100 text-slate-400"}
       `}>
-        {deal.isActive ? "نشط" : "معطل"}
+        {DEAL_STATUS_LABELS[deal.status]}
       </div>
 
       {/* ─── Content ─────────────────────────────────────── */}
-      <div className="p-4">
-        <h3 className="text-sm font-bold text-slate-800 mb-1">{deal.title}</h3>
+      <div className="p-3 md:p-4">
+        <h3 className="text-sm font-bold text-slate-800 mb-1 truncate">{deal.title}</h3>
         <p className="text-xs text-slate-500 mb-2 line-clamp-2">{deal.description}</p>
         <p className="text-sm font-bold text-[#c9a84c] mb-3">{deal.discount}</p>
 
         {/* ─── Actions ─────────────────────────────────── */}
         <div className="flex gap-2">
-          <button
-            onClick={handleToggle}
-            disabled={toggling}
-            className={`
-              flex-1 text-xs font-medium py-2 rounded-lg transition-all disabled:opacity-50
-              ${deal.isActive
-                ? "bg-red-50 text-red-500 hover:bg-red-100"
-                : "bg-green-50 text-green-600 hover:bg-green-100"
-              }
-            `}
-          >
-            {toggling ? "..." : deal.isActive ? "تعطيل" : "تفعيل"}
-          </button>
+          {(deal.status === "active" || deal.status === "inactive") && (
+            <button
+              onClick={handleToggle}
+              disabled={toggling}
+              className={`
+                flex-1 text-xs font-medium py-1.5 rounded-lg transition-all disabled:opacity-50
+                ${deal.status === "active"
+                  ? "bg-red-50 text-red-500 hover:bg-red-100"
+                  : "bg-green-50 text-green-600 hover:bg-green-100"
+                }
+              `}
+            >
+              {toggling ? "..." : deal.status === "active" ? "تعطيل" : "تفعيل"}
+            </button>
+          )}
 
           <button
             onClick={() => onEdit(deal)}
-            className="flex-1 text-xs font-medium py-2 rounded-lg bg-slate-50 text-slate-600 hover:bg-slate-100 transition-all"
+            className="flex-1 text-xs font-medium py-1.5 rounded-lg bg-slate-50 text-slate-600 hover:bg-slate-100 transition-all"
           >
             تعديل
           </button>
@@ -100,7 +102,7 @@ export default function DealCard({ deal, onEdit }: DealCardProps) {
           <button
             onClick={handleDelete}
             disabled={deleting}
-            className="w-9 h-9 flex items-center justify-center rounded-lg bg-red-50 text-red-400 hover:bg-red-100 transition-all disabled:opacity-50"
+            className="w-8 h-8 flex items-center justify-center rounded-lg bg-red-50 text-red-400 hover:bg-red-100 transition-all disabled:opacity-50"
           >
             {deleting ? (
               <svg className="w-3.5 h-3.5 animate-spin" fill="none" stroke="currentColor" viewBox="0 0 24 24">
