@@ -241,7 +241,7 @@ export default function VendorLayout({ children, title }: VendorLayoutProps) {
       </nav>
 
       {/* ─── Main Content ─────────────────────────────────── */}
-      <div className={`flex-1 flex flex-col transition-all duration-300 md:${sidebarOpen ? "mr-64" : "mr-16"}`}>
+      <div className={`flex-1 flex flex-col transition-all duration-300 ${sidebarOpen ? "md:mr-64" : "md:mr-16"}`}>
         <header className="sticky top-0 z-20 bg-white border-b border-slate-200 px-4 md:px-6 py-4 shadow-sm">
           <h1 className="text-lg font-bold text-[#0f172a]">{title}</h1>
         </header>
