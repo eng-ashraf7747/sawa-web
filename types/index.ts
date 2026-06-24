@@ -48,3 +48,6 @@ export type AuthMode = "login" | "register" | "forgotPassword";
 
 export type { Deal, CreateDealInput, UpdateDealInput } from "./deal";
 export type { Category, CreateCategoryInput, UpdateCategoryInput } from "./category";
+export type { Transaction, CreateTransactionInput, TransactionStatus } from "./transaction";
+export type { Review, CreateReviewInput } from "./review";
+export type { VendorStats, DealStat } from "./vendor";

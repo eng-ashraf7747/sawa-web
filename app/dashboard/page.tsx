@@ -16,13 +16,17 @@ export default function DashboardPage() {
       router.push("/");
       return;
     }
-    if (!userData) return; // انتظر حتى تكتمل بيانات Firestore
+    if (!userData) return;
     if (!userData.emailVerified) {
       router.push("/verify-email");
       return;
     }
     if (userData.role === "admin") {
       router.push("/admin/overview");
+      return;
+    }
+    if (userData.role === "vendor") {
+      router.push("/vendor/overview");
       return;
     }
   }, [loading, isAuthenticated, userData, router]);
@@ -35,6 +39,7 @@ export default function DashboardPage() {
 
   if (!isAuthenticated || !userData.emailVerified) return null;
   if (userData.role === "admin") return null;
+  if (userData.role === "vendor") return null;
 
   return <DashboardLayout />;
 }
