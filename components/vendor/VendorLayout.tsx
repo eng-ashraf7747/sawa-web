@@ -169,6 +169,20 @@ export default function VendorLayout({ children, title }: VendorLayoutProps) {
               absolute bottom-full mb-2 bg-[#0f172a] rounded-xl shadow-xl border border-white/10 overflow-hidden
               ${sidebarOpen ? "left-3 right-3" : "left-1 right-1"}
             `}>
+              {/* ─── ملفي التجاري ─────────────────────────── */}
+              <Link
+                href="/vendor/profile"
+                onClick={() => setMenuOpen(false)}
+                className="w-full flex items-center gap-3 px-4 py-3 text-sm text-white/70 hover:bg-white/10 hover:text-white transition-colors"
+              >
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+                    d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
+                </svg>
+                ملفي التجاري
+              </Link>
+
+              {/* ─── تسجيل الخروج ─────────────────────────── */}
               <button
                 onClick={handleLogout}
                 disabled={loggingOut}
@@ -189,6 +203,7 @@ export default function VendorLayout({ children, title }: VendorLayoutProps) {
               </button>
             </div>
           )}
+
           <button
             onClick={() => setMenuOpen(!menuOpen)}
             className="w-full flex items-center gap-3 p-2 rounded-lg hover:bg-white/10 transition-colors"
@@ -231,6 +246,15 @@ export default function VendorLayout({ children, title }: VendorLayoutProps) {
             <span className="text-[10px]">{item.label}</span>
           </Link>
         ))}
+        <Link
+          href="/vendor/profile"
+          className={`flex flex-col items-center gap-0.5 px-2 py-1.5 rounded-xl transition-all ${
+            pathname === "/vendor/profile" ? "text-[#c9a84c]" : "text-white/60"
+          }`}
+        >
+          <span className="text-xl">🏪</span>
+          <span className="text-[10px]">ملفي</span>
+        </Link>
         <button
           onClick={handleLogout}
           className="flex flex-col items-center gap-0.5 px-2 py-1.5 rounded-xl transition-all text-red-300"
