@@ -30,7 +30,7 @@ export const useUser = (): UseUserReturn => {
           userRef,
           (snapshot) => {
             if (snapshot.exists()) {
-              setUserData(snapshot.data() as User);
+              setUserData({ ...snapshot.data(), uid: snapshot.id } as User);
             } else {
               setUserData(null);
             }
