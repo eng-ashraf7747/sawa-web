@@ -9,9 +9,9 @@ export interface Deal {
   vendorName?: string | null;
   title: string;
   description: string;
-  imageUrl?: string;
+  imageUrl?: string | null;
   discount: string;
-  externalUrl?: string;
+  externalUrl?: string | null;
   expiresAt?: Date | null;
   status: DealStatus;
   order: number;

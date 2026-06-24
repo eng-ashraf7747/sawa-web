@@ -59,14 +59,15 @@ export default function DealForm({
         title: title.trim(),
         description: description.trim(),
         discount: discount.trim(),
-        imageUrl: imageUrl || undefined,
-        externalUrl: externalUrl.trim() || undefined,
+        imageUrl: imageUrl || null,
+        externalUrl: externalUrl.trim() || null,
         order,
         status: isVendor ? "pending" : (initialValues?.status ?? "active"),
         expiresAt: null,
       });
-    } catch {
+    } catch  {
       setError("حدث خطأ — حاول مرة أخرى");
+
     } finally {
       setLoading(false);
     }
