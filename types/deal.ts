@@ -6,6 +6,7 @@ export interface Deal {
   id: string;
   categoryId: string;
   vendorId?: string | null;
+  vendorName?: string | null;
   title: string;
   description: string;
   imageUrl?: string;

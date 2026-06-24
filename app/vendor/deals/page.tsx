@@ -4,6 +4,7 @@
 
 import { useState } from "react";
 import { useVendorGuard } from "@/hooks/useVendorGuard";
+import { useUser } from "@/hooks/useUser";
 import { useVendorDeals } from "@/hooks/useDeals";
 import { useActiveCategories } from "@/hooks/useCategories";
 import { addDeal, updateDeal } from "@/lib/deals";
@@ -15,6 +16,7 @@ type ModalMode = "add" | "edit" | null;
 
 export default function VendorDealsPage() {
   const { isAuthorized, loading: authLoading, vendorId } = useVendorGuard();
+  const { userData } = useUser();
   const { deals, loading: dealsLoading } = useVendorDeals(vendorId ?? "");
   const { categories } = useActiveCategories();
   const [modalMode, setModalMode] = useState<ModalMode>(null);
@@ -178,6 +180,7 @@ export default function VendorDealsPage() {
                 submitLabel={modalMode === "add" ? "إرسال للمراجعة" : "حفظ التعديلات"}
                 isVendor={true}
                 vendorId={vendorId ?? undefined}
+                vendorName={userData?.displayName ?? undefined}
               />
             )}
           </div>

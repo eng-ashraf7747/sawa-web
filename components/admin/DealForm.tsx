@@ -4,6 +4,7 @@
 
 import { useState } from "react";
 import { CreateDealInput } from "@/types/deal";
+import { useVendors } from "@/hooks/useVendors";
 import ImageUpload from "@/components/admin/ImageUpload";
 
 interface DealFormProps {
@@ -14,6 +15,7 @@ interface DealFormProps {
   submitLabel?: string;
   isVendor?: boolean;
   vendorId?: string;
+  vendorName?: string;
 }
 
 export default function DealForm({
@@ -24,13 +26,15 @@ export default function DealForm({
   submitLabel = "إضافة",
   isVendor = false,
   vendorId,
+  vendorName,
 }: DealFormProps) {
+  const { vendors } = useVendors();
   const [title, setTitle] = useState(initialValues?.title ?? "");
   const [description, setDescription] = useState(initialValues?.description ?? "");
   const [discount, setDiscount] = useState(initialValues?.discount ?? "");
   const [imageUrl, setImageUrl] = useState(initialValues?.imageUrl ?? "");
   const [externalUrl, setExternalUrl] = useState(initialValues?.externalUrl ?? "");
-  const [linkedVendorId, setLinkedVendorId] = useState(initialValues?.vendorId ?? "");
+  const [selectedVendorId, setSelectedVendorId] = useState(initialValues?.vendorId ?? "");
   const [order, setOrder] = useState(initialValues?.order ?? 1);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -42,10 +46,16 @@ export default function DealForm({
 
     setLoading(true);
     setError(null);
+
+    const selectedVendor = vendors.find((v) => v.uid === selectedVendorId);
+
     try {
       await onSubmit({
         categoryId,
-        vendorId: isVendor ? vendorId ?? null : linkedVendorId.trim() || null,
+        vendorId: isVendor ? vendorId ?? null : selectedVendorId || null,
+        vendorName: isVendor
+          ? vendorName ?? null
+          : selectedVendor?.displayName ?? null,
         title: title.trim(),
         description: description.trim(),
         discount: discount.trim(),
@@ -128,24 +138,28 @@ export default function DealForm({
         />
       </div>
 
-      {/* ─── ربط بمورد (للأدمن فقط) ─────────────────────── */}
+      {/* ─── مقدم الخدمة — للأدمن فقط ───────────────────── */}
       {!isVendor && (
         <div>
           <label className="block text-sm font-medium text-slate-700 mb-1">
-            ربط بمورد <span className="text-slate-400 text-xs">(اختياري)</span>
+            مقدم الخدمة <span className="text-slate-400 text-xs">(اختياري)</span>
           </label>
-          <input
-            type="text"
-            value={linkedVendorId}
-            onChange={(e) => setLinkedVendorId(e.target.value)}
-            placeholder="uid المورد"
-            className="w-full px-4 py-2.5 rounded-lg border border-slate-200 text-sm text-slate-800 focus:outline-none focus:border-[#1a3c6e] focus:ring-1 focus:ring-[#1a3c6e] transition"
-          />
-          <p className="text-xs text-slate-400 mt-1">اتركه فارغاً للعروض غير المرتبطة بمورد</p>
+          <select
+            value={selectedVendorId}
+            onChange={(e) => setSelectedVendorId(e.target.value)}
+            className="w-full px-4 py-2.5 rounded-lg border border-slate-200 text-sm text-slate-800 focus:outline-none focus:border-[#1a3c6e] focus:ring-1 focus:ring-[#1a3c6e] transition bg-white"
+          >
+            <option value="">— بدون مورد محدد —</option>
+            {vendors.map((v) => (
+              <option key={v.uid} value={v.uid}>
+                {v.displayName} — {v.email}
+              </option>
+            ))}
+          </select>
         </div>
       )}
 
-      {/* ─── الترتيب (للأدمن فقط) ───────────────────────── */}
+      {/* ─── الترتيب — للأدمن فقط ────────────────────────── */}
       {!isVendor && (
         <div>
           <label className="block text-sm font-medium text-slate-700 mb-1">
