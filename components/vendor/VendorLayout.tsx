@@ -51,6 +51,19 @@ const navItems = [
     enabled: true,
   },
   {
+    id: "bookings",
+    label: "الحجوزات",
+    href: "/vendor/bookings",
+    mobileIcon: "📦",
+    icon: (
+      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+          d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01" />
+      </svg>
+    ),
+    enabled: true,
+  },
+  {
     id: "reviews",
     label: "التقييمات",
     href: "/vendor/reviews",
@@ -74,7 +87,7 @@ export default function VendorLayout({ children, title }: VendorLayoutProps) {
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [menuOpen, setMenuOpen] = useState(false);
   const [loggingOut, setLoggingOut] = useState(false);
-  const menuRef = useRef<HTMLDivElement>(null);
+  const menuRef = useRef <HTMLDivElement>(null);
   const pathname = usePathname();
   const { userData } = useUser();
   const router = useRouter();
@@ -102,13 +115,11 @@ export default function VendorLayout({ children, title }: VendorLayoutProps) {
   return (
     <div className="min-h-screen bg-[#f8fafc] flex" dir="rtl">
 
-      {/* ─── Desktop Sidebar (md+) ────────────────────────── */}
       <aside className={`
         hidden md:flex fixed top-0 right-0 h-full bg-[#1e293b] text-white z-30
         flex-col transition-all duration-300
         ${sidebarOpen ? "w-64" : "w-16"}
       `}>
-        {/* Logo */}
         <div className="flex items-center justify-between px-4 py-5 border-b border-white/10">
           {sidebarOpen && (
             <div className="flex items-center gap-2">
@@ -126,7 +137,6 @@ export default function VendorLayout({ children, title }: VendorLayoutProps) {
           </button>
         </div>
 
-        {/* Nav Items */}
         <nav className="flex-1 py-4 overflow-y-auto">
           {navItems.map((item) => {
             const isActive = pathname === item.href;
@@ -162,14 +172,12 @@ export default function VendorLayout({ children, title }: VendorLayoutProps) {
           })}
         </nav>
 
-        {/* Vendor Info + Dropdown */}
         <div className="border-t border-white/10 p-3 relative" ref={menuRef}>
           {menuOpen && (
             <div className={`
               absolute bottom-full mb-2 bg-[#0f172a] rounded-xl shadow-xl border border-white/10 overflow-hidden
               ${sidebarOpen ? "left-3 right-3" : "left-1 right-1"}
             `}>
-              {/* ─── ملفي التجاري ─────────────────────────── */}
               <Link
                 href="/vendor/profile"
                 onClick={() => setMenuOpen(false)}
@@ -181,8 +189,6 @@ export default function VendorLayout({ children, title }: VendorLayoutProps) {
                 </svg>
                 ملفي التجاري
               </Link>
-
-              {/* ─── تسجيل الخروج ─────────────────────────── */}
               <button
                 onClick={handleLogout}
                 disabled={loggingOut}
@@ -229,7 +235,6 @@ export default function VendorLayout({ children, title }: VendorLayoutProps) {
         </div>
       </aside>
 
-      {/* ─── Mobile Bottom Navigation ─────────────────────── */}
       <nav
         className="md:hidden fixed bottom-0 left-0 right-0 z-50 flex items-center justify-around px-2 py-2 border-t border-white/10"
         style={{ background: "linear-gradient(180deg, #1e293b 0%, #0f172a 100%)" }}
@@ -264,7 +269,6 @@ export default function VendorLayout({ children, title }: VendorLayoutProps) {
         </button>
       </nav>
 
-      {/* ─── Main Content ─────────────────────────────────── */}
       <div className={`flex-1 flex flex-col transition-all duration-300 ${sidebarOpen ? "md:mr-64" : "md:mr-16"}`}>
         <header className="sticky top-0 z-20 bg-white border-b border-slate-200 px-4 md:px-6 py-4 shadow-sm">
           <h1 className="text-lg font-bold text-[#0f172a]">{title}</h1>

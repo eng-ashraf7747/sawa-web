@@ -51,3 +51,5 @@ export type { Category, CreateCategoryInput, UpdateCategoryInput } from "./categ
 export type { Transaction, CreateTransactionInput, TransactionStatus } from "./transaction";
 export type { Review, CreateReviewInput } from "./review";
 export type { VendorStats, DealStat } from "./vendor";
+export type { Booking, CreateBookingInput, DeliverBookingInput, BookingReview, CreateBookingReviewInput, ReviewType, ContactChannel, BookingStatus } from "./booking";
+export { BOOKING_STATUS_LABELS, CONTACT_CHANNEL_LABELS, REVIEW_TYPE_LABELS, COMMISSION_RATE, POINTS_PER_EGP, MAX_COMMISSION_PER_BOOKING, MIN_OPERATIONS_FOR_RATING, BOOKING_CANCEL_HOURS } from "./booking";
