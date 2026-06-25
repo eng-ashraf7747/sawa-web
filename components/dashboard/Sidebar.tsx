@@ -12,14 +12,14 @@ interface SidebarProps {
   onNavigate: (page: string) => void;
 }
 
-const tierColors: Record<string, string> = {
+const tierColors: Record <string, string> = {
   bronze: "#cd7f32",
   silver: "#c0c0c0",
   gold: "#c9a84c",
   diamond: "#E8F4FD",
 };
 
-const tierNames: Record<string, string> = {
+const tierNames: Record <string, string> = {
   bronze: "برونزي",
   silver: "فضي",
   gold: "ذهبي",
@@ -70,12 +70,12 @@ export default function Sidebar({ userData, activePage, onNavigate }: SidebarPro
 
   return (
     <>
-      {/* ─── Desktop Sidebar (md+) ────────────────────────── */}
+      {/* Desktop Sidebar */}
       <aside
         className="hidden md:flex w-[260px] min-h-screen flex-col"
         style={{ background: "linear-gradient(180deg, #1a3c6e 0%, #0f2447 100%)" }}
       >
-        {/* ─── Logo ───────────────────────────────────────── */}
+        {/* Logo */}
         <div className="flex justify-center items-center py-6 border-b border-white/10">
           <div className="w-12 h-12 rounded-full bg-white flex items-center justify-center shadow-lg">
             <Image
@@ -91,7 +91,7 @@ export default function Sidebar({ userData, activePage, onNavigate }: SidebarPro
           </div>
         </div>
 
-        {/* ─── User Profile ───────────────────────────────── */}
+        {/* User Profile */}
         <div className="flex flex-col items-center py-6 px-4 border-b border-white/10">
           <div
             className="w-16 h-16 rounded-full bg-white/20 flex items-center justify-center text-2xl mb-3"
@@ -113,7 +113,7 @@ export default function Sidebar({ userData, activePage, onNavigate }: SidebarPro
           </p>
         </div>
 
-        {/* ─── Navigation ─────────────────────────────────── */}
+        {/* Navigation */}
         <nav className="flex-1 px-3 py-4 flex flex-col gap-1">
           <NavItem id="home" icon="🏠" label="الرئيسية" onClick={() => onNavigate("home")} />
 
@@ -131,6 +131,7 @@ export default function Sidebar({ userData, activePage, onNavigate }: SidebarPro
             <div className="flex flex-col gap-0.5">
               <NavItem id="deals" label="العروض المتاحة" onClick={() => onNavigate("deals")} isChild />
               <NavItem id="requests" label="الخدمات المطلوبة" onClick={() => onNavigate("requests")} isChild />
+              <NavItem id="bookings" label="حجوزاتي" onClick={() => onNavigate("bookings")} isChild />
             </div>
           )}
 
@@ -152,7 +153,7 @@ export default function Sidebar({ userData, activePage, onNavigate }: SidebarPro
           )}
         </nav>
 
-        {/* ─── Logout ─────────────────────────────────────── */}
+        {/* Logout */}
         <div className="px-3 py-4 border-t border-white/10">
           <button
             onClick={handleLogout}
@@ -164,7 +165,7 @@ export default function Sidebar({ userData, activePage, onNavigate }: SidebarPro
         </div>
       </aside>
 
-      {/* ─── Mobile Bottom Navigation ─────────────────────── */}
+      {/* Mobile Bottom Navigation */}
       <nav
         className="md:hidden fixed bottom-0 left-0 right-0 z-50 flex items-center justify-around px-2 py-2 border-t border-white/10"
         style={{ background: "linear-gradient(180deg, #1a3c6e 0%, #0f2447 100%)" }}
@@ -190,6 +191,16 @@ export default function Sidebar({ userData, activePage, onNavigate }: SidebarPro
         </button>
 
         <button
+          onClick={() => onNavigate("bookings")}
+          className={`flex flex-col items-center gap-0.5 px-3 py-1.5 rounded-xl transition-all ${
+            activePage === "bookings" ? "text-[#c9a84c]" : "text-white/60"
+          }`}
+        >
+          <span className="text-xl">📦</span>
+          <span className="text-[10px]">حجوزاتي</span>
+        </button>
+
+        <button
           onClick={() => onNavigate("requests")}
           className={`flex flex-col items-center gap-0.5 px-3 py-1.5 rounded-xl transition-all ${
             activePage === "requests" ? "text-[#c9a84c]" : "text-white/60"
@@ -207,16 +218,6 @@ export default function Sidebar({ userData, activePage, onNavigate }: SidebarPro
         >
           <span className="text-xl">🏆</span>
           <span className="text-[10px]">نقاطي</span>
-        </button>
-
-        <button
-          onClick={() => onNavigate("profile")}
-          className={`flex flex-col items-center gap-0.5 px-3 py-1.5 rounded-xl transition-all ${
-            activePage === "profile" ? "text-[#c9a84c]" : "text-white/60"
-          }`}
-        >
-          <span className="text-xl">👤</span>
-          <span className="text-[10px]">حسابي</span>
         </button>
 
         <button
