@@ -18,6 +18,7 @@ import {
   BookingStatus,
   CreateBookingInput,
   DeliverBookingInput,
+  CancelBookingInput,
   BookingReview,
   CreateBookingReviewInput,
   COMMISSION_RATE,
@@ -25,7 +26,6 @@ import {
   MAX_COMMISSION_PER_BOOKING,
 } from "@/types/booking";
 
-// ===== تحويل Firestore document =====
 function toBooking(id: string, data: any): Booking {
   return {
     id,
@@ -33,11 +33,19 @@ function toBooking(id: string, data: any): Booking {
     vendorId: data.vendorId,
     dealId: data.dealId,
     dealTitle: data.dealTitle,
+    dealDiscount: data.dealDiscount ?? "",
+    dealCategory: data.dealCategory ?? "",
+    userName: data.userName ?? "",
+    vendorName: data.vendorName ?? "",
     contactChannel: data.contactChannel,
     status: data.status,
     orderValue: data.orderValue ?? null,
     commission: data.commission ?? 0,
     vendorPoints: data.vendorPoints ?? 0,
+    isFirstBooking: data.isFirstBooking ?? false,
+    isFirstBookingWithVendor: data.isFirstBookingWithVendor ?? false,
+    isReferral: data.isReferral ?? false,
+    cancellationReason: data.cancellationReason ?? null,
     createdAt: (data.createdAt as Timestamp)?.toDate() ?? new Date(),
     deliveredAt: data.deliveredAt ? (data.deliveredAt as Timestamp).toDate() : null,
     completedAt: data.completedAt ? (data.completedAt as Timestamp).toDate() : null,
@@ -59,7 +67,6 @@ function toBookingReview(id: string, data: any): BookingReview {
   };
 }
 
-// ===== المستخدم ينشئ حجزاً =====
 export async function createBooking(
   input: CreateBookingInput
 ): Promise <string> {
@@ -70,6 +77,7 @@ export async function createBooking(
       orderValue: null,
       commission: 0,
       vendorPoints: 0,
+      cancellationReason: null,
       createdAt: serverTimestamp(),
       deliveredAt: null,
       completedAt: null,
@@ -82,7 +90,6 @@ export async function createBooking(
   }
 }
 
-// ===== المورد يسجل الفاتورة ويضغط تم التسليم =====
 export async function markDelivered(
   bookingId: string,
   input: DeliverBookingInput
@@ -107,7 +114,6 @@ export async function markDelivered(
   }
 }
 
-// ===== المستخدم يضغط تم الاستلام =====
 export async function markCompleted(
   bookingId: string
 ): Promise <void> {
@@ -122,13 +128,14 @@ export async function markCompleted(
   }
 }
 
-// ===== إلغاء الحجز =====
 export async function cancelBooking(
-  bookingId: string
+  bookingId: string,
+  input?: CancelBookingInput
 ): Promise <void> {
   try {
     await updateDoc(doc(db, "bookings", bookingId), {
       status: "cancelled" as BookingStatus,
+      cancellationReason: input?.cancellationReason ?? null,
       cancelledAt: serverTimestamp(),
     });
   } catch (error) {
@@ -137,7 +144,6 @@ export async function cancelBooking(
   }
 }
 
-// ===== جلب حجوزات المستخدم =====
 export async function getUserBookings(
   userId: string
 ): Promise <Booking[]> {
@@ -155,7 +161,6 @@ export async function getUserBookings(
   }
 }
 
-// ===== جلب حجوزات المورد =====
 export async function getVendorBookings(
   vendorId: string
 ): Promise <Booking[]> {
@@ -173,7 +178,6 @@ export async function getVendorBookings(
   }
 }
 
-// ===== إضافة تقييم =====
 export async function createBookingReview(
   input: CreateBookingReviewInput
 ): Promise <string> {
@@ -190,7 +194,6 @@ export async function createBookingReview(
   }
 }
 
-// ===== جلب تقييمات المورد المعتمدة =====
 export async function getVendorReviews(
   vendorId: string
 ): Promise <BookingReview[]> {
@@ -210,7 +213,6 @@ export async function getVendorReviews(
   }
 }
 
-// ===== جلب متوسط تقييم المورد =====
 export async function getVendorRatingAverage(
   vendorId: string
 ): Promise <{ average: number; count: number } | null> {

@@ -38,7 +38,14 @@ export default function BookingContactModal({
       vendorId: deal.vendorId ?? "",
       dealId: deal.id,
       dealTitle: deal.title,
+      dealDiscount: deal.discount ?? "",
+      dealCategory: deal.categoryId ?? "",
+      userName: userData.displayName ?? "",
+      vendorName: vendor.businessName ?? "",
       contactChannel: channel,
+      isFirstBooking: false,
+      isFirstBookingWithVendor: false,
+      isReferral: !!userData.referredBy,
     });
 
     if (!bookingId) return;
