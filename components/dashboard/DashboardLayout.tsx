@@ -6,6 +6,7 @@ import { useUser } from "@/hooks/useUser";
 import { useActiveCategories } from "@/hooks/useCategories";
 import { useUserBookings } from "@/hooks/useBookings";
 import { useBookingActions } from "@/hooks/useBookings";
+import { useUserRequests } from "@/hooks/useRequests";
 import Sidebar from "./Sidebar";
 import DashboardHeader from "./DashboardHeader";
 import StatsBar from "./StatsBar";
@@ -103,11 +104,13 @@ function MainContent({
   userData: ReturnType <typeof useUser>["userData"];
   categoriesCount: number;
 }) {
+  const { activeCount } = useUserRequests(userData?.uid ?? "");
+
   const statsBar = (
     <StatsBar
       userData={userData}
       categoriesCount={categoriesCount}
-      requestsCount={0}
+      requestsCount={activeCount}
       onCardClick={onSectionChange}
       activeSection={activeSection}
     />
@@ -118,7 +121,6 @@ function MainContent({
   }
   if (activeSection === "requests") {
     return <>{statsBar}<RequestsSection userId={userData?.uid ?? ""} userName={userData?.displayName ?? ""} /></>;
-
   }
   if (activeSection === "points") {
     return <>{statsBar}<PointsSection userData={userData} /></>;
@@ -146,7 +148,6 @@ function MainContent({
       <div className="flex gap-6">
         <CategoryGrid columns={2} />
         <RequestsSection userId={userData?.uid ?? ""} userName={userData?.displayName ?? ""} />
-
       </div>
     </>
   );
