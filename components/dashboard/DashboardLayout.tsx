@@ -3,7 +3,6 @@
 "use client";
 import { useState } from "react";
 import { useUser } from "@/hooks/useUser";
-import { mockRequests } from "@/lib/mockData";
 import { useActiveCategories } from "@/hooks/useCategories";
 import { useUserBookings } from "@/hooks/useBookings";
 import { useBookingActions } from "@/hooks/useBookings";
@@ -108,7 +107,7 @@ function MainContent({
     <StatsBar
       userData={userData}
       categoriesCount={categoriesCount}
-      requestsCount={mockRequests.length}
+      requestsCount={0}
       onCardClick={onSectionChange}
       activeSection={activeSection}
     />
