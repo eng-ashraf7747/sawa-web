@@ -118,7 +118,8 @@ function MainContent({
     return <>{statsBar}<CategoryGrid columns={4} /></>;
   }
   if (activeSection === "requests") {
-    return <>{statsBar}<RequestsSection requests={mockRequests} /></>;
+    return <>{statsBar}<RequestsSection userId={userData?.uid ?? ""} userName={userData?.displayName ?? ""} /></>;
+
   }
   if (activeSection === "points") {
     return <>{statsBar}<PointsSection userData={userData} /></>;
@@ -145,7 +146,8 @@ function MainContent({
       {statsBar}
       <div className="flex gap-6">
         <CategoryGrid columns={2} />
-        <RequestsSection requests={mockRequests} />
+        <RequestsSection userId={userData?.uid ?? ""} userName={userData?.displayName ?? ""} />
+
       </div>
     </>
   );
