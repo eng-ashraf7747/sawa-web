@@ -19,7 +19,6 @@ import { db } from "@/lib/firebase";
 import {
   Request,
   CreateRequestInput,
-  UpdateRequestInput,
   RequestStatus,
   MAX_REQUESTS_PER_USER,
 } from "@/types/request";
@@ -48,29 +47,10 @@ function toRequest(id: string, data: any): Request {
   };
 }
 
-// ─── إنشاء طلب جديد أو تحديث موجود ──────────────────────
+// ─── إنشاء طلب جديد ──────────────────────────────────────
 export async function createOrUpdateRequest(
   input: CreateRequestInput
 ): Promise <{ id: string; isNew: boolean }> {
-  // تحقق من وجود طلب سابق لنفس المستخدم في نفس الفئة الفرعية
-  const existing = await getDocs(
-    query(
-      requestsRef(),
-      where("userId", "==", input.userId),
-      where("subcategoryId", "==", input.subcategoryId),
-      where("status", "==", "pending")
-    )
-  );
-
-  if (!existing.empty) {
-    const existingDoc = existing.docs[0];
-    await updateDoc(doc(db, COLLECTION, existingDoc.id), {
-      title: input.title,
-      description: input.description,
-      updatedAt: serverTimestamp(),
-    });
-    return { id: existingDoc.id, isNew: false };
-  }
 
   // تحقق من الحد الأقصى 5 طلبات
   const userRequests = await getDocs(
