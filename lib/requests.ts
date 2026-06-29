@@ -22,6 +22,7 @@ import {
   RequestStatus,
   MAX_REQUESTS_PER_USER,
 } from "@/types/request";
+import { trackEvent } from "@/lib/analytics";
 
 const COLLECTION = "requests";
 const requestsRef = () => collection(db, COLLECTION);
@@ -52,7 +53,6 @@ export async function createOrUpdateRequest(
   input: CreateRequestInput
 ): Promise <{ id: string; isNew: boolean }> {
 
-  // تحقق من الحد الأقصى 5 طلبات
   const userRequests = await getDocs(
     query(
       requestsRef(),
@@ -65,7 +65,6 @@ export async function createOrUpdateRequest(
     throw new Error(`وصلت للحد الأقصى من الطلبات (${MAX_REQUESTS_PER_USER})`);
   }
 
-  // إنشاء طلب جديد
   const ref = await addDoc(requestsRef(), {
     ...input,
     status: "pending" as RequestStatus,
@@ -75,8 +74,19 @@ export async function createOrUpdateRequest(
     fulfilledAt: null,
   });
 
-  // زيادة عداد المهتمين في الفئة الفرعية
   await incrementSubcategoryCount(input.subcategoryId, 1);
+
+  await trackEvent({
+    eventType: "request_created",
+    userId: input.userId,
+    categoryId: input.categoryId,
+    requestId: ref.id,
+    metadata: {
+      subcategoryId: input.subcategoryId,
+      subcategoryName: input.subcategoryName,
+      categoryName: input.categoryName,
+    },
+  });
 
   return { id: ref.id, isNew: true };
 }
@@ -84,10 +94,18 @@ export async function createOrUpdateRequest(
 // ─── حذف طلب ─────────────────────────────────────────────
 export async function deleteRequest(
   requestId: string,
-  subcategoryId: string
+  subcategoryId: string,
+  userId?: string
 ): Promise <void> {
   await deleteDoc(doc(db, COLLECTION, requestId));
   await incrementSubcategoryCount(subcategoryId, -1);
+
+  await trackEvent({
+    eventType: "request_deleted",
+    userId: userId ?? null,
+    requestId,
+    metadata: { subcategoryId },
+  });
 }
 
 // ─── تنفيذ الطلب (الأدمن) ────────────────────────────────
@@ -100,7 +118,14 @@ export async function fulfillRequest(
     fulfilledAt: serverTimestamp(),
     updatedAt: serverTimestamp(),
   });
+
   await incrementSubcategoryCount(subcategoryId, -1);
+
+  await trackEvent({
+    eventType: "request_fulfilled",
+    requestId,
+    metadata: { subcategoryId },
+  });
 }
 
 // ─── جلب طلبات المستخدم ──────────────────────────────────

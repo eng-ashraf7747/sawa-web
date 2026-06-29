@@ -2,7 +2,7 @@
 
 "use client";
 
-import { use, useState } from "react";
+import { use, useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useActiveDeals } from "@/hooks/useDeals";
 import { useActiveCategories } from "@/hooks/useCategories";
@@ -11,16 +11,48 @@ import { useUser } from "@/hooks/useUser";
 import { Deal } from "@/types/deal";
 import VendorProfileCard from "@/components/vendor/VendorProfileCard";
 import BookingContactModal from "@/components/dashboard/BookingContactModal";
+import { trackEvent } from "@/lib/analytics";
 
 function DealCard({
   deal,
+  userId,
+  categoryId,
   onVendorClick,
   onBookClick,
 }: {
   deal: Deal;
+  userId: string | null;
+  categoryId: string;
   onVendorClick: (vendorId: string, vendorName: string) => void;
   onBookClick: (deal: Deal) => void;
 }) {
+  useEffect(() => {
+    trackEvent({
+      eventType: "offer_viewed",
+      userId: userId ?? null,
+      offerId: deal.id,
+      categoryId,
+      metadata: {
+        dealTitle: deal.title,
+        vendorId: deal.vendorId ?? null,
+      },
+    });
+  }, [deal.id]);
+
+  const handleBookClick = () => {
+    trackEvent({
+      eventType: "offer_requested",
+      userId: userId ?? null,
+      offerId: deal.id,
+      categoryId,
+      metadata: {
+        dealTitle: deal.title,
+        vendorId: deal.vendorId ?? null,
+      },
+    });
+    onBookClick(deal);
+  };
+
   return (
     <div className="bg-white rounded-2xl border border-[#e8eaed] shadow-sm hover:shadow-md hover:border-[#c9a84c] transition-all duration-200 overflow-hidden group flex flex-col">
 
@@ -46,8 +78,7 @@ function DealCard({
         <div className="flex gap-2 mt-auto">
           {deal.externalUrl && (
             
-            <a 
-            href={deal.externalUrl}
+              <a href={deal.externalUrl}
               target="_blank"
               rel="noopener noreferrer"
               className="flex-1 py-2 border border-[#1a3c6e] text-[#1a3c6e] rounded-xl text-xs font-bold text-center hover:bg-[#1a3c6e] hover:text-white transition-all duration-200"
@@ -56,7 +87,7 @@ function DealCard({
             </a>
           )}
           <button
-            onClick={() => onBookClick(deal)}
+            onClick={handleBookClick}
             className="flex-1 py-2 bg-[#1a3c6e] text-white rounded-xl text-xs font-bold hover:bg-[#c9a84c] hover:text-[#1a3c6e] transition-all duration-200"
           >
             احصل على العرض
@@ -208,6 +239,8 @@ export default function DealsPage({
               <DealCard
                 key={deal.id}
                 deal={deal}
+                userId={userData?.uid ?? null}
+                categoryId={categoryId}
                 onVendorClick={(vendorId, vendorName) =>
                   setSelectedVendor({ vendorId, vendorName })
                 }

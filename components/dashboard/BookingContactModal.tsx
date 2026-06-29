@@ -8,6 +8,7 @@ import { VendorProfile } from "@/types/vendorProfile";
 import { ContactChannel } from "@/types/booking";
 import { useBookingActions } from "@/hooks/useBookings";
 import { useUser } from "@/hooks/useUser";
+import { trackEvent } from "@/lib/analytics";
 
 interface Props {
   deal: Deal;
@@ -51,6 +52,20 @@ export default function BookingContactModal({
     if (!bookingId) return;
 
     onBooked(bookingId);
+
+    await trackEvent({
+      eventType: channel === "whatsapp"
+        ? "booking_contact_whatsapp"
+        : "booking_contact_phone",
+      userId: userData.uid,
+      offerId: deal.id,
+      bookingId,
+      metadata: {
+        dealTitle: deal.title,
+        vendorName: vendor.businessName ?? "",
+        categoryId: deal.categoryId ?? "",
+      },
+    });
 
     if (channel === "whatsapp" && vendor.whatsapp) {
       const msg = encodeURIComponent(

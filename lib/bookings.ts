@@ -25,6 +25,7 @@ import {
   POINTS_PER_EGP,
   MAX_COMMISSION_PER_BOOKING,
 } from "@/types/booking";
+import { trackEvent } from "@/lib/analytics";
 
 function toBooking(id: string, data: any): Booking {
   return {
@@ -47,9 +48,15 @@ function toBooking(id: string, data: any): Booking {
     isReferral: data.isReferral ?? false,
     cancellationReason: data.cancellationReason ?? null,
     createdAt: (data.createdAt as Timestamp)?.toDate() ?? new Date(),
-    deliveredAt: data.deliveredAt ? (data.deliveredAt as Timestamp).toDate() : null,
-    completedAt: data.completedAt ? (data.completedAt as Timestamp).toDate() : null,
-    cancelledAt: data.cancelledAt ? (data.cancelledAt as Timestamp).toDate() : null,
+    deliveredAt: data.deliveredAt
+      ? (data.deliveredAt as Timestamp).toDate()
+      : null,
+    completedAt: data.completedAt
+      ? (data.completedAt as Timestamp).toDate()
+      : null,
+    cancelledAt: data.cancelledAt
+      ? (data.cancelledAt as Timestamp).toDate()
+      : null,
   };
 }
 
@@ -83,6 +90,22 @@ export async function createBooking(
       completedAt: null,
       cancelledAt: null,
     });
+
+    await trackEvent({
+      eventType: "booking_created",
+      userId: input.userId,
+      vendorId: input.vendorId,
+      offerId: input.dealId,
+      categoryId: input.dealCategory,
+      bookingId: ref.id,
+      metadata: {
+        contactChannel: input.contactChannel,
+        isFirstBooking: input.isFirstBooking,
+        isFirstBookingWithVendor: input.isFirstBookingWithVendor,
+        isReferral: input.isReferral,
+      },
+    });
+
     return ref.id;
   } catch (error) {
     console.error("createBooking error:", error);
@@ -108,6 +131,13 @@ export async function markDelivered(
       vendorPoints,
       deliveredAt: serverTimestamp(),
     });
+
+    await trackEvent({
+      eventType: "booking_delivered",
+      bookingId,
+      value: input.orderValue,
+      metadata: { commission, vendorPoints },
+    });
   } catch (error) {
     console.error("markDelivered error:", error);
     throw new Error("تعذر تحديث حالة الحجز");
@@ -121,6 +151,11 @@ export async function markCompleted(
     await updateDoc(doc(db, "bookings", bookingId), {
       status: "completed" as BookingStatus,
       completedAt: serverTimestamp(),
+    });
+
+    await trackEvent({
+      eventType: "booking_completed",
+      bookingId,
     });
   } catch (error) {
     console.error("markCompleted error:", error);
@@ -137,6 +172,12 @@ export async function cancelBooking(
       status: "cancelled" as BookingStatus,
       cancellationReason: input?.cancellationReason ?? null,
       cancelledAt: serverTimestamp(),
+    });
+
+    await trackEvent({
+      eventType: "booking_cancelled",
+      bookingId,
+      metadata: { reason: input?.cancellationReason ?? null },
     });
   } catch (error) {
     console.error("cancelBooking error:", error);
@@ -187,6 +228,17 @@ export async function createBookingReview(
       approved: false,
       createdAt: serverTimestamp(),
     });
+
+    await trackEvent({
+      eventType: "review_product_submitted",
+      userId: input.userId,
+      bookingId: input.bookingId,
+      metadata: {
+        type: input.type,
+        rating: input.rating,
+      },
+    });
+
     return ref.id;
   } catch (error) {
     console.error("createBookingReview error:", error);
@@ -224,7 +276,10 @@ export async function getVendorRatingAverage(
     );
     const snap = await getDocs(q);
     if (snap.size < 5) return null;
-    const total = snap.docs.reduce((sum, d) => sum + (d.data().rating ?? 0), 0);
+    const total = snap.docs.reduce(
+      (sum, d) => sum + (d.data().rating ?? 0),
+      0
+    );
     return { average: total / snap.size, count: snap.size };
   } catch (error) {
     console.error("getVendorRatingAverage error:", error);

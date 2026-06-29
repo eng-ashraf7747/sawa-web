@@ -16,10 +16,11 @@ import {
   serverTimestamp,
 } from "firebase/firestore";
 import { auth, db } from "./firebase";
+import { trackEvent, captureTrafficSource } from "@/lib/analytics";
 
 const googleProvider = new GoogleAuthProvider();
 
-// ─── حفظ مستخدم جديد بالإيميل — role: user دائماً ───────────
+// ─── حفظ مستخدم جديد بالإيميل ────────────────────────────────
 const saveNewEmailUser = async (
   user: User,
   extra: {
@@ -47,7 +48,7 @@ const saveNewEmailUser = async (
   }, { merge: true });
 };
 
-// ─── حفظ مستخدم Google — لا يكتب role (يحافظ على الموجود) ───
+// ─── حفظ مستخدم Google ────────────────────────────────────────
 const saveGoogleUser = async (user: User) => {
   const userRef = doc(db, "users", user.uid);
   await setDoc(userRef, {
@@ -67,8 +68,17 @@ const saveGoogleUser = async (user: User) => {
 };
 
 // ─── Login ────────────────────────────────────────────────────
-export const loginWithEmail = (email: string, password: string) =>
-  signInWithEmailAndPassword(auth, email, password);
+export const loginWithEmail = async (email: string, password: string) => {
+  const credential = await signInWithEmailAndPassword(auth, email, password);
+
+  await trackEvent({
+    eventType: "user_logged_in",
+    userId: credential.user.uid,
+    metadata: { method: "email" },
+  });
+
+  return credential;
+};
 
 // ─── Register ─────────────────────────────────────────────────
 export const registerWithEmail = async (
@@ -78,16 +88,46 @@ export const registerWithEmail = async (
   phone: string,
   referralCode?: string
 ) => {
+  captureTrafficSource();
+
   const credential = await createUserWithEmailAndPassword(auth, email, password);
   await sendEmailVerification(credential.user);
   await saveNewEmailUser(credential.user, { displayName, phone, referralCode });
+
+  await trackEvent({
+    eventType: "user_registered",
+    userId: credential.user.uid,
+    metadata: {
+      method: "email",
+      hasReferral: !!referralCode,
+      referralCode: referralCode ?? null,
+    },
+  });
+
+  if (referralCode) {
+    await trackEvent({
+      eventType: "user_used_referral",
+      userId: credential.user.uid,
+      metadata: { referralCode },
+    });
+  }
+
   return credential;
 };
 
 // ─── Google Sign-In ───────────────────────────────────────────
 export const loginWithGoogle = async () => {
+  captureTrafficSource();
+
   const credential = await signInWithPopup(auth, googleProvider);
   await saveGoogleUser(credential.user);
+
+  await trackEvent({
+    eventType: "user_logged_in",
+    userId: credential.user.uid,
+    metadata: { method: "google" },
+  });
+
   return credential;
 };
 
