@@ -17,8 +17,12 @@ import {
 } from "firebase/firestore";
 import { auth, db } from "./firebase";
 import { trackEvent, captureTrafficSource } from "@/lib/analytics";
+import { addPointsEntry } from "@/lib/pointsLedger";
 
 const googleProvider = new GoogleAuthProvider();
+
+// ─── ثوابت النقاط ────────────────────────────────────────────
+const SIGNUP_BONUS_POINTS = 25;
 
 // ─── حفظ مستخدم جديد بالإيميل ────────────────────────────────
 const saveNewEmailUser = async (
@@ -40,6 +44,7 @@ const saveNewEmailUser = async (
     address: null,
     role: "user",
     tier: "bronze",
+    points: SIGNUP_BONUS_POINTS,
     referredBy: extra.referralCode || null,
     emailVerified: false,
     isActive: true,
@@ -60,6 +65,7 @@ const saveGoogleUser = async (user: User) => {
     city: "fayoum",
     address: null,
     tier: "bronze",
+    points: SIGNUP_BONUS_POINTS,
     emailVerified: true,
     isActive: true,
     createdAt: serverTimestamp(),
@@ -94,9 +100,20 @@ export const registerWithEmail = async (
   await sendEmailVerification(credential.user);
   await saveNewEmailUser(credential.user, { displayName, phone, referralCode });
 
+  await addPointsEntry({
+    userId: credential.user.uid,
+    type: "earned",
+    source: "registration",
+    points: SIGNUP_BONUS_POINTS,
+    currentBalance: 0,
+    relatedEntityId: null,
+    relatedEntityType: null,
+  });
+
   await trackEvent({
     eventType: "user_registered",
     userId: credential.user.uid,
+    pointsChange: SIGNUP_BONUS_POINTS,
     metadata: {
       method: "email",
       hasReferral: !!referralCode,
@@ -122,9 +139,20 @@ export const loginWithGoogle = async () => {
   const credential = await signInWithPopup(auth, googleProvider);
   await saveGoogleUser(credential.user);
 
+  await addPointsEntry({
+    userId: credential.user.uid,
+    type: "earned",
+    source: "registration",
+    points: SIGNUP_BONUS_POINTS,
+    currentBalance: 0,
+    relatedEntityId: null,
+    relatedEntityType: null,
+  });
+
   await trackEvent({
     eventType: "user_logged_in",
     userId: credential.user.uid,
+    pointsChange: SIGNUP_BONUS_POINTS,
     metadata: { method: "google" },
   });
 

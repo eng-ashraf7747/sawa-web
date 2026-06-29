@@ -1,8 +1,11 @@
+// C:\sawa-web\hooks\usePoints.ts
+
 "use client";
 import { useState, useEffect } from "react";
-import { collection, onSnapshot, query, orderBy } from "firebase/firestore";
+import { collection, onSnapshot, query, where, orderBy } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import { PointsLedgerEntry } from "@/types";
+import { ANALYTICS_COLLECTIONS } from "@/types/analytics";
 
 interface PointsSummary {
   signupBonus: number;
@@ -29,9 +32,9 @@ const defaultSummary: PointsSummary = {
 };
 
 export const usePoints = (uid: string | undefined): UsePointsReturn => {
-  const [summary, setSummary] = useState<PointsSummary>(defaultSummary);
+  const [summary, setSummary] = useState <PointsSummary>(defaultSummary);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState <string | null>(null);
 
   useEffect(() => {
     if (!uid) {
@@ -39,13 +42,20 @@ export const usePoints = (uid: string | undefined): UsePointsReturn => {
       return;
     }
 
-    const ledgerRef = collection(db, "users", uid, "pointsLedger");
-    const q = query(ledgerRef, orderBy("timestamp", "desc"));
+    const ledgerRef = collection(db, ANALYTICS_COLLECTIONS.POINTS_LEDGER);
+    const q = query(
+      ledgerRef,
+      where("userId", "==", uid),
+      orderBy("createdAt", "desc")
+    );
 
     const unsubscribe = onSnapshot(
       q,
       (snapshot) => {
-        const entries = snapshot.docs.map((doc) => doc.data() as PointsLedgerEntry);
+        const entries = snapshot.docs.map((d) => ({
+          id: d.id,
+          ...d.data(),
+        } as PointsLedgerEntry));
 
         const newSummary: PointsSummary = { ...defaultSummary };
 

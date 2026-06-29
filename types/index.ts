@@ -24,10 +24,23 @@ export interface User {
 }
 
 export interface PointsLedgerEntry {
-  type: "signup_bonus" | "referral_joiner_bonus" | "referral_owner_bonus" | "admin_adjustment" | "subscription_payment";
+  id: string;
+  userId: string;
+  type:
+    | "signup_bonus"
+    | "referral_joiner_bonus"
+    | "referral_owner_bonus"
+    | "admin_adjustment"
+    | "subscription_payment";
   points: number;
-  timestamp: Date;
+  monetaryValue: number;
+  balanceBefore: number;
+  balanceAfter: number;
+  relatedEntityId: string | null;
+  relatedEntityType: string | null;
+  expiryDate: Date | null;
   note: string;
+  createdAt: Date;
 }
 
 export interface City {
@@ -51,5 +64,23 @@ export type { Category, CreateCategoryInput, UpdateCategoryInput } from "./categ
 export type { Transaction, CreateTransactionInput, TransactionStatus } from "./transaction";
 export type { Review, CreateReviewInput } from "./review";
 export type { VendorStats, DealStat } from "./vendor";
-export type { Booking, CreateBookingInput, DeliverBookingInput, BookingReview, CreateBookingReviewInput, ReviewType, ContactChannel, BookingStatus } from "./booking";
-export { BOOKING_STATUS_LABELS, CONTACT_CHANNEL_LABELS, REVIEW_TYPE_LABELS, COMMISSION_RATE, POINTS_PER_EGP, MAX_COMMISSION_PER_BOOKING, MIN_OPERATIONS_FOR_RATING, BOOKING_CANCEL_HOURS } from "./booking";
+export type {
+  Booking,
+  CreateBookingInput,
+  DeliverBookingInput,
+  BookingReview,
+  CreateBookingReviewInput,
+  ReviewType,
+  ContactChannel,
+  BookingStatus,
+} from "./booking";
+export {
+  BOOKING_STATUS_LABELS,
+  CONTACT_CHANNEL_LABELS,
+  REVIEW_TYPE_LABELS,
+  COMMISSION_RATE,
+  POINTS_PER_EGP,
+  MAX_COMMISSION_PER_BOOKING,
+  MIN_OPERATIONS_FOR_RATING,
+  BOOKING_CANCEL_HOURS,
+} from "./booking";
