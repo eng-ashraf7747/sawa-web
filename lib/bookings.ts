@@ -1,11 +1,13 @@
 // C:\sawa-web\lib\bookings.ts
 
+import { addCommissionEntry } from "@/lib/commissionLedger";
 import { db } from "./firebase";
 import {
   collection,
   doc,
   addDoc,
   updateDoc,
+  getDoc,
   getDocs,
   query,
   where,
@@ -131,6 +133,21 @@ export async function markDelivered(
       vendorPoints,
       deliveredAt: serverTimestamp(),
     });
+
+    // جلب بيانات الحجز لتسجيل العمولة
+    const bookingSnap = await getDoc(doc(db, "bookings", bookingId));
+    if (bookingSnap.exists()) {
+      const bookingData = bookingSnap.data();
+      await addCommissionEntry({
+        bookingId,
+        userId: bookingData.userId ?? "",
+        vendorId: bookingData.vendorId ?? "",
+        categoryId: bookingData.dealCategory ?? "",
+        invoiceValue: input.orderValue,
+        commissionRate: COMMISSION_RATE,
+        commissionCap: MAX_COMMISSION_PER_BOOKING,
+      });
+    }
 
     await trackEvent({
       eventType: "booking_delivered",
