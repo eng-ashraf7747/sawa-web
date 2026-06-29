@@ -17,31 +17,20 @@ import { getTotalPointsGranted, getTotalPointsRedeemed } from "@/lib/pointsLedge
 
 // ─── أنواع البيانات ───────────────────────────────────────
 export interface ExecutiveSummary {
-  // المستخدمون
   totalUsers: number;
   activeUsers: number;
-
-  // العمليات
   totalBookings: number;
   completedBookings: number;
   cancelledBookings: number;
   conversionRate: number;
-
-  // المالية
   totalInvoiceValue: number;
   totalCommissionDue: number;
   averageInvoiceValue: number;
-
-  // النقاط
   totalPointsGranted: number;
   totalPointsRedeemed: number;
   pointsCost: number;
-
-  // الموردون
   totalVendors: number;
   activeVendors: number;
-
-  // أكثر فئة
   topCategory: string;
 }
 
@@ -105,6 +94,13 @@ export function useExecutiveDashboard(
         (d) => d.data().isActive === true
       ).length;
 
+      // ─── الفئات — جلب الأسماء ────────────────────────
+      const categoriesSnap = await getDocs(collection(db, "categories"));
+      const categoryMap: Record <string, string> = {};
+      categoriesSnap.docs.forEach((d) => {
+        categoryMap[d.id] = d.data().name ?? d.id;
+      });
+
       // ─── الحجوزات في الفترة ──────────────────────────
       const bookingsSnap = await getDocs(
         query(
@@ -142,11 +138,12 @@ export function useExecutiveDashboard(
       const totalPointsRedeemed = await getTotalPointsRedeemed(startDate, endDate);
       const pointsCost = totalPointsRedeemed * 0.5;
 
-      // ─── أكثر فئة ────────────────────────────────────
+      // ─── أكثر فئة — باستخدام الاسم ──────────────────
       const categoryCount: Record <string, number> = {};
       bookings.forEach((b) => {
         if (b.dealCategory) {
-          categoryCount[b.dealCategory] = (categoryCount[b.dealCategory] ?? 0) + 1;
+          const catName = categoryMap[b.dealCategory] ?? b.dealCategory;
+          categoryCount[catName] = (categoryCount[catName] ?? 0) + 1;
         }
       });
       const topCategory = Object.entries(categoryCount).sort(

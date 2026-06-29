@@ -28,7 +28,7 @@ function DateRangePicker({
           type="date"
           value={fmt(startDate)}
           onChange={(e) => onStartChange(new Date(e.target.value))}
-          className="border border-slate-200 rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:border-[#1a3c6e]"
+          className="border border-slate-200 rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:border-[#1a3c6e] [direction:ltr]"
         />
       </div>
       <div className="flex items-center gap-2">
@@ -37,7 +37,7 @@ function DateRangePicker({
           type="date"
           value={fmt(endDate)}
           onChange={(e) => onEndChange(new Date(e.target.value))}
-          className="border border-slate-200 rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:border-[#1a3c6e]"
+          className="border border-slate-200 rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:border-[#1a3c6e] [direction:ltr]"
         />
       </div>
     </div>
