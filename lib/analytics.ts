@@ -73,7 +73,7 @@ export function captureTrafficSource(): void {
 }
 
 // ─── جلب مصدر الزيارة المحفوظ ────────────────────────────
-function getSavedSource(): TrafficSource {
+export function getSavedSource(): TrafficSource {
   if (typeof window === "undefined") return "unknown";
   try {
     const saved = sessionStorage.getItem("sawa_traffic_source");

@@ -244,7 +244,8 @@ async function buildVendorsSheet(): Promise <any[][]> {
 // ─── Sheet 5: Analytics Events ────────────────────────────
 async function buildAnalyticsSheet(
   startDate: Date,
-  endDate: Date
+  endDate: Date,
+  categoryMap: Record <string, string>
 ): Promise <any[][]> {
   const snap = await getDocs(
     query(
@@ -257,7 +258,7 @@ async function buildAnalyticsSheet(
 
   const headers = [
     "eventId", "نوع الحدث", "userId", "vendorId",
-    "offerId", "categoryId", "bookingId", "requestId",
+    "offerId", "categoryId", "اسم الفئة", "bookingId", "requestId",
     "المصدر", "الجهاز", "sessionId", "القيمة",
     "تغيير النقاط", "التاريخ", "الساعة"
   ];
@@ -271,6 +272,7 @@ async function buildAnalyticsSheet(
       str(e.vendorId),
       str(e.offerId),
       str(e.categoryId),
+      e.categoryId ? (categoryMap[e.categoryId] ?? str(e.categoryId)) : "—",
       str(e.bookingId),
       str(e.requestId),
       str(e.source),
@@ -344,7 +346,7 @@ export async function exportToExcel(
     buildBookingsSheet(startDate, endDate, categoryMap),
     buildUsersSheet(startDate, endDate),
     buildVendorsSheet(),
-    buildAnalyticsSheet(startDate, endDate),
+    buildAnalyticsSheet(startDate, endDate, categoryMap),
     buildCommissionsSheet(startDate, endDate),
   ]);
 

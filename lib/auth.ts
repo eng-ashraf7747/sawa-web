@@ -16,7 +16,11 @@ import {
   serverTimestamp,
 } from "firebase/firestore";
 import { auth, db } from "./firebase";
-import { trackEvent, captureTrafficSource } from "@/lib/analytics";
+import {
+  trackEvent,
+  captureTrafficSource,
+  getSavedSource,
+} from "@/lib/analytics";
 import { addPointsEntry } from "@/lib/pointsLedger";
 
 const googleProvider = new GoogleAuthProvider();
@@ -46,6 +50,7 @@ const saveNewEmailUser = async (
     tier: "bronze",
     points: SIGNUP_BONUS_POINTS,
     referredBy: extra.referralCode || null,
+    registrationSource: getSavedSource(),
     emailVerified: false,
     isActive: true,
     createdAt: serverTimestamp(),
@@ -66,6 +71,7 @@ const saveGoogleUser = async (user: User) => {
     address: null,
     tier: "bronze",
     points: SIGNUP_BONUS_POINTS,
+    registrationSource: getSavedSource(),
     emailVerified: true,
     isActive: true,
     createdAt: serverTimestamp(),
