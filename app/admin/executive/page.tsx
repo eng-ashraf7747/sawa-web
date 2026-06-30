@@ -6,6 +6,7 @@ import { useState } from "react";
 import AdminLayout from "@/components/admin/AdminLayout";
 import { useAdminGuard } from "@/hooks/useAdminGuard";
 import { useExecutiveDashboard } from "@/hooks/useExecutiveDashboard";
+import { exportToExcel } from "@/lib/exportExcel";
 
 function DateRangePicker({
   startDate,
@@ -89,8 +90,23 @@ export default function ExecutiveDashboardPage() {
 
   const [startDate, setStartDate] = useState <Date>(firstOfMonth);
   const [endDate, setEndDate] = useState <Date>(now);
+  const [exporting, setExporting] = useState(false);
+  const [exportError, setExportError] = useState <string | null>(null);
 
   const { summary, loading, error } = useExecutiveDashboard(startDate, endDate);
+
+  const handleExport = async () => {
+    setExporting(true);
+    setExportError(null);
+    try {
+      await exportToExcel(startDate, endDate);
+    } catch (err) {
+      console.error("Export error:", err);
+      setExportError("تعذر تصدير التقرير");
+    } finally {
+      setExporting(false);
+    }
+  };
 
   if (authLoading) {
     return (
@@ -106,16 +122,40 @@ export default function ExecutiveDashboardPage() {
     <AdminLayout title="لوحة المتابعة التنفيذية">
       <div className="px-4 md:px-6 lg:px-8 py-6" dir="rtl">
 
-        {/* ─── Date Range ─── */}
+        {/* ─── Date Range + Export ─── */}
         <div className="bg-white rounded-xl border border-slate-100 p-4 mb-6 flex flex-wrap items-center justify-between gap-4">
           <p className="text-sm font-semibold text-[#1a3c6e]">نطاق التقرير</p>
-          <DateRangePicker
-            startDate={startDate}
-            endDate={endDate}
-            onStartChange={setStartDate}
-            onEndChange={setEndDate}
-          />
+          <div className="flex flex-wrap items-center gap-3">
+            <DateRangePicker
+              startDate={startDate}
+              endDate={endDate}
+              onStartChange={setStartDate}
+              onEndChange={setEndDate}
+            />
+            <button
+              onClick={handleExport}
+              disabled={exporting}
+              className="flex items-center gap-2 bg-[#1a3c6e] hover:bg-[#15306a] text-white text-sm font-semibold px-4 py-2 rounded-lg transition disabled:opacity-50"
+            >
+              {exporting ? (
+                <svg className="w-4 h-4 animate-spin" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                </svg>
+              ) : (
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                </svg>
+              )}
+              {exporting ? "جاري التصدير..." : "تصدير Excel"}
+            </button>
+          </div>
         </div>
+
+        {exportError && (
+          <div className="mb-6 px-4 py-3 bg-red-50 border border-red-100 rounded-lg text-sm text-red-600">
+            {exportError}
+          </div>
+        )}
 
         {loading && (
           <div className="flex justify-center py-16">
@@ -130,7 +170,6 @@ export default function ExecutiveDashboardPage() {
         {!loading && !error && summary && (
           <div className="flex flex-col gap-8">
 
-            {/* ─── المستخدمون والموردون ─── */}
             <div>
               <SectionTitle title="المستخدمون والموردون" />
               <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-4">
@@ -141,7 +180,6 @@ export default function ExecutiveDashboardPage() {
               </div>
             </div>
 
-            {/* ─── العمليات ─── */}
             <div>
               <SectionTitle title="العمليات" />
               <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-4">
@@ -157,7 +195,6 @@ export default function ExecutiveDashboardPage() {
               </div>
             </div>
 
-            {/* ─── المالية ─── */}
             <div>
               <SectionTitle title="المالية" />
               <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-4">
@@ -184,7 +221,6 @@ export default function ExecutiveDashboardPage() {
               </div>
             </div>
 
-            {/* ─── النقاط ─── */}
             <div>
               <SectionTitle title="اقتصاد النقاط" />
               <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-3 gap-4">
