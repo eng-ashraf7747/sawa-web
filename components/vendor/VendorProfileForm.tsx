@@ -4,6 +4,7 @@
 
 import { useState, useEffect } from "react";
 import { VendorProfile, UpdateVendorProfileInput } from "@/types/vendorProfile";
+import { useAsyncAction } from "@/hooks/useAsyncAction";
 
 interface VendorProfileFormProps {
   profile: VendorProfile | null;
@@ -16,10 +17,10 @@ interface VendorProfileFormProps {
 export default function VendorProfileForm({
   profile,
   onSave,
-  saving,
   error,
   success,
 }: VendorProfileFormProps) {
+  const { run, loading } = useAsyncAction();
   const [businessName, setBusinessName] = useState("");
   const [description, setDescription] = useState("");
   const [address, setAddress] = useState("");
@@ -45,13 +46,15 @@ export default function VendorProfileForm({
       return;
     }
     setFormError(null);
-    await onSave({
-      businessName: businessName.trim(),
-      description: description.trim() || null,
-      address: address.trim() || null,
-      mapsUrl: mapsUrl.trim() || null,
-      phone: phone.trim() || null,
-      whatsapp: whatsapp.trim() || null,
+    await run(async () => {
+      await onSave({
+        businessName: businessName.trim(),
+        description: description.trim() || null,
+        address: address.trim() || null,
+        mapsUrl: mapsUrl.trim() || null,
+        phone: phone.trim() || null,
+        whatsapp: whatsapp.trim() || null,
+      });
     });
   };
 
@@ -170,10 +173,10 @@ export default function VendorProfileForm({
       {/* ─── Save Button ─────────────────────────────────── */}
       <button
         onClick={handleSave}
-        disabled={saving}
+        disabled={loading}
         className="w-full bg-[#1a3c6e] text-white text-sm font-medium py-3 rounded-lg hover:bg-[#1a3c6e]/90 disabled:opacity-50 transition"
       >
-        {saving ? "جارٍ الحفظ..." : "حفظ البيانات"}
+        {loading ? "جارٍ الحفظ..." : "حفظ البيانات"}
       </button>
 
     </div>

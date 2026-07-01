@@ -5,6 +5,7 @@
 import { useState } from "react";
 import { Booking, BOOKING_STATUS_LABELS, CONTACT_CHANNEL_LABELS } from "@/types/booking";
 import { useBookingActions } from "@/hooks/useBookings";
+import { useAsyncAction } from "@/hooks/useAsyncAction";
 
 interface Props {
   booking: Booking;
@@ -12,10 +13,13 @@ interface Props {
 }
 
 export default function VendorBookingCard({ booking, onUpdated }: Props) {
-  const { deliver, cancel, loading } = useBookingActions();
+  const { deliver, cancel } = useBookingActions();
+  const { run, loading } = useAsyncAction();
   const [orderValue, setOrderValue] = useState("");
   const [showDeliverForm, setShowDeliverForm] = useState(false);
   const [error, setError] = useState <string | null>(null);
+  const [justDelivered, setJustDelivered] = useState(false);
+  const [justCancelled, setJustCancelled] = useState(false);
 
   const handleDeliver = async () => {
     const value = parseFloat(orderValue);
@@ -23,15 +27,29 @@ export default function VendorBookingCard({ booking, onUpdated }: Props) {
       setError("أدخل قيمة صحيحة للفاتورة");
       return;
     }
+    if (!confirm(`هل تأكدت من قيمة الفاتورة (${value} جنيه)؟ لا يمكن تعديلها بعد التأكيد`)) return;
     setError(null);
-    const ok = await deliver(booking.id, { orderValue: value });
-    if (ok) onUpdated();
-    else setError("تعذر تسجيل التسليم");
+    await run(async () => {
+      const ok = await deliver(booking.id, { orderValue: value });
+      if (ok) {
+        setJustDelivered(true);
+        setShowDeliverForm(false);
+        onUpdated();
+      } else {
+        setError("تعذر تسجيل التسليم");
+      }
+    });
   };
 
   const handleCancel = async () => {
-    const ok = await cancel(booking.id);
-    if (ok) onUpdated();
+    if (!confirm("هل تريد إلغاء هذا الطلب؟")) return;
+    await run(async () => {
+      const ok = await cancel(booking.id);
+      if (ok) {
+        setJustCancelled(true);
+        onUpdated();
+      }
+    });
   };
 
   const statusColors: Record <string, string> = {
@@ -40,6 +58,8 @@ export default function VendorBookingCard({ booking, onUpdated }: Props) {
     completed: "bg-green-100 text-green-700",
     cancelled: "bg-red-100 text-red-700",
   };
+
+  const isStillPending = booking.status === "pending" && !justDelivered && !justCancelled;
 
   return (
     <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-4">
@@ -65,7 +85,7 @@ export default function VendorBookingCard({ booking, onUpdated }: Props) {
         </p>
       )}
 
-      {booking.status === "pending" && (
+      {isStillPending && (
         <>
           {!showDeliverForm ? (
             <div className="flex gap-2">
@@ -78,7 +98,7 @@ export default function VendorBookingCard({ booking, onUpdated }: Props) {
               <button
                 onClick={handleCancel}
                 disabled={loading}
-                className="flex-1 bg-red-50 hover:bg-red-100 text-red-500 text-sm font-semibold py-2 rounded-xl transition"
+                className="flex-1 bg-red-50 hover:bg-red-100 text-red-500 text-sm font-semibold py-2 rounded-xl transition disabled:opacity-50"
               >
                 إلغاء
               </button>
@@ -97,7 +117,7 @@ export default function VendorBookingCard({ booking, onUpdated }: Props) {
                 <button
                   onClick={handleDeliver}
                   disabled={loading}
-                  className="flex-1 bg-[#1a3c6e] hover:bg-[#15306a] text-white text-sm font-semibold py-2 rounded-xl transition"
+                  className="flex-1 bg-[#1a3c6e] hover:bg-[#15306a] text-white text-sm font-semibold py-2 rounded-xl transition disabled:opacity-50"
                 >
                   {loading ? "جاري..." : "تأكيد التسليم"}
                 </button>
@@ -111,6 +131,12 @@ export default function VendorBookingCard({ booking, onUpdated }: Props) {
             </div>
           )}
         </>
+      )}
+
+      {(justDelivered || (booking.status !== "pending" && !showDeliverForm)) && booking.status === "pending" && (
+        <p className="text-green-600 text-xs font-semibold text-center py-2">
+          تم تسجيل التسليم ✓
+        </p>
       )}
 
     </div>

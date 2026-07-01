@@ -5,6 +5,7 @@
 import { useState } from "react";
 import { Booking } from "@/types/booking";
 import { useBookingReviewActions } from "@/hooks/useBookingReviews";
+import { useAsyncAction } from "@/hooks/useAsyncAction";
 
 interface Props {
   booking: Booking;
@@ -17,7 +18,8 @@ export default function VendorReviewModal({
   onClose,
   onSubmitted,
 }: Props) {
-  const { submitReview, loading } = useBookingReviewActions();
+  const { submitReview } = useBookingReviewActions();
+  const { run, loading } = useAsyncAction();
   const [rating, setRating] = useState(0);
   const [comment, setComment] = useState("");
   const [error, setError] = useState <string | null>(null);
@@ -26,16 +28,18 @@ export default function VendorReviewModal({
   const handleSubmit = async () => {
     if (rating === 0) { setError("اختر تقييماً للمشتري"); return; }
     setError(null);
-    const ok = await submitReview({
-      bookingId: booking.id,
-      userId: booking.vendorId,
-      targetId: booking.userId,
-      type: "vendor_to_user",
-      rating,
-      comment: comment || null,
+    await run(async () => {
+      const ok = await submitReview({
+        bookingId: booking.id,
+        userId: booking.vendorId,
+        targetId: booking.userId,
+        type: "vendor_to_user",
+        rating,
+        comment: comment || null,
+      });
+      if (ok) setDone(true);
+      else setError("تعذر إرسال التقييم");
     });
-    if (ok) setDone(true);
-    else setError("تعذر إرسال التقييم");
   };
 
   return (
@@ -59,7 +63,8 @@ export default function VendorReviewModal({
                 <button
                   key={s}
                   onClick={() => setRating(s)}
-                  className={`text-3xl transition ${
+                  disabled={loading}
+                  className={`text-3xl transition disabled:opacity-50 ${
                     s <= rating ? "text-[#c9a84c]" : "text-gray-300"
                   }`}
                 >
@@ -72,7 +77,8 @@ export default function VendorReviewModal({
               value={comment}
               onChange={(e) => setComment(e.target.value)}
               placeholder="تعليق اختياري..."
-              className="w-full border border-gray-200 rounded-xl p-3 text-sm resize-none h-20 focus:outline-none focus:border-[#1a3c6e]"
+              disabled={loading}
+              className="w-full border border-gray-200 rounded-xl p-3 text-sm resize-none h-20 focus:outline-none focus:border-[#1a3c6e] disabled:opacity-50"
             />
 
             {error && <p className="text-red-500 text-sm mt-2">{error}</p>}
@@ -80,14 +86,15 @@ export default function VendorReviewModal({
             <button
               onClick={handleSubmit}
               disabled={loading}
-              className="w-full mt-4 bg-[#1a3c6e] hover:bg-[#15306a] text-white font-semibold py-3 rounded-xl transition"
+              className="w-full mt-4 bg-[#1a3c6e] hover:bg-[#15306a] text-white font-semibold py-3 rounded-xl transition disabled:opacity-50"
             >
               {loading ? "جاري الإرسال..." : "إرسال التقييم"}
             </button>
 
             <button
               onClick={onClose}
-              className="w-full mt-3 py-2 text-gray-400 hover:text-gray-600 text-sm transition"
+              disabled={loading}
+              className="w-full mt-3 py-2 text-gray-400 hover:text-gray-600 text-sm transition disabled:opacity-50"
             >
               تخطي
             </button>

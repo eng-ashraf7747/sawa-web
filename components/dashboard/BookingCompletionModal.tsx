@@ -6,6 +6,7 @@ import { useState } from "react";
 import { Booking } from "@/types/booking";
 import { useBookingActions } from "@/hooks/useBookings";
 import { useBookingReviewActions } from "@/hooks/useBookingReviews";
+import { useAsyncAction } from "@/hooks/useAsyncAction";
 
 interface Props {
   booking: Booking;
@@ -20,8 +21,9 @@ export default function BookingCompletionModal({
   onClose,
   onCompleted,
 }: Props) {
-  const { complete, loading: completing } = useBookingActions();
-  const { submitReview, loading: reviewing } = useBookingReviewActions();
+  const { complete } = useBookingActions();
+  const { submitReview } = useBookingReviewActions();
+  const { run, loading: submitting } = useAsyncAction();
 
   const [step, setStep] = useState <Step>("confirm");
   const [productRating, setProductRating] = useState(0);
@@ -31,37 +33,44 @@ export default function BookingCompletionModal({
   const [error, setError] = useState <string | null>(null);
 
   const handleConfirm = async () => {
-    const ok = await complete(booking.id);
-    if (ok) setStep("review_product");
-    else setError("تعذر تأكيد الاستلام");
+    if (!confirm("هل تأكدت من استلام الطلب؟")) return;
+    await run(async () => {
+      const ok = await complete(booking.id);
+      if (ok) setStep("review_product");
+      else setError("تعذر تأكيد الاستلام");
+    });
   };
 
   const handleProductReview = async () => {
     if (productRating === 0) { setError("اختر تقييماً للسلعة"); return; }
     setError(null);
-    await submitReview({
-      bookingId: booking.id,
-      userId: booking.userId,
-      targetId: booking.dealId,
-      type: "user_to_product",
-      rating: productRating,
-      comment: productComment || null,
+    await run(async () => {
+      await submitReview({
+        bookingId: booking.id,
+        userId: booking.userId,
+        targetId: booking.dealId,
+        type: "user_to_product",
+        rating: productRating,
+        comment: productComment || null,
+      });
+      setStep("review_vendor");
     });
-    setStep("review_vendor");
   };
 
   const handleVendorReview = async () => {
     if (vendorRating === 0) { setError("اختر تقييماً للبائع"); return; }
     setError(null);
-    await submitReview({
-      bookingId: booking.id,
-      userId: booking.userId,
-      targetId: booking.vendorId,
-      type: "user_to_vendor",
-      rating: vendorRating,
-      comment: vendorComment || null,
+    await run(async () => {
+      await submitReview({
+        bookingId: booking.id,
+        userId: booking.userId,
+        targetId: booking.vendorId,
+        type: "user_to_vendor",
+        rating: vendorRating,
+        comment: vendorComment || null,
+      });
+      setStep("done");
     });
-    setStep("done");
   };
 
   const StarRow = ({
@@ -76,7 +85,8 @@ export default function BookingCompletionModal({
         <button
           key={s}
           onClick={() => onChange(s)}
-          className={`text-3xl transition ${
+          disabled={submitting}
+          className={`text-3xl transition disabled:opacity-50 ${
             s <= value ? "text-[#c9a84c]" : "text-gray-300"
           }`}
         >
@@ -104,14 +114,15 @@ export default function BookingCompletionModal({
             {error && <p className="text-red-500 text-sm mb-3">{error}</p>}
             <button
               onClick={handleConfirm}
-              disabled={completing}
-              className="w-full bg-[#1a3c6e] hover:bg-[#15306a] text-white font-semibold py-3 rounded-xl transition mb-3"
+              disabled={submitting}
+              className="w-full bg-[#1a3c6e] hover:bg-[#15306a] text-white font-semibold py-3 rounded-xl transition mb-3 disabled:opacity-50"
             >
-              {completing ? "جاري التأكيد..." : "نعم، تم الاستلام"}
+              {submitting ? "جاري التأكيد..." : "نعم، تم الاستلام"}
             </button>
             <button
               onClick={onClose}
-              className="w-full py-2 text-gray-400 hover:text-gray-600 text-sm transition"
+              disabled={submitting}
+              className="w-full py-2 text-gray-400 hover:text-gray-600 text-sm transition disabled:opacity-50"
             >
               إلغاء
             </button>
@@ -129,15 +140,16 @@ export default function BookingCompletionModal({
               value={productComment}
               onChange={(e) => setProductComment(e.target.value)}
               placeholder="تعليق اختياري..."
-              className="w-full border border-gray-200 rounded-xl p-3 text-sm resize-none h-20 focus:outline-none focus:border-[#1a3c6e]"
+              disabled={submitting}
+              className="w-full border border-gray-200 rounded-xl p-3 text-sm resize-none h-20 focus:outline-none focus:border-[#1a3c6e] disabled:opacity-50"
             />
             {error && <p className="text-red-500 text-sm mt-2">{error}</p>}
             <button
               onClick={handleProductReview}
-              disabled={reviewing}
-              className="w-full mt-4 bg-[#1a3c6e] hover:bg-[#15306a] text-white font-semibold py-3 rounded-xl transition"
+              disabled={submitting}
+              className="w-full mt-4 bg-[#1a3c6e] hover:bg-[#15306a] text-white font-semibold py-3 rounded-xl transition disabled:opacity-50"
             >
-              {reviewing ? "جاري الإرسال..." : "التالي"}
+              {submitting ? "جاري الإرسال..." : "التالي"}
             </button>
           </>
         )}
@@ -153,15 +165,16 @@ export default function BookingCompletionModal({
               value={vendorComment}
               onChange={(e) => setVendorComment(e.target.value)}
               placeholder="تعليق اختياري..."
-              className="w-full border border-gray-200 rounded-xl p-3 text-sm resize-none h-20 focus:outline-none focus:border-[#1a3c6e]"
+              disabled={submitting}
+              className="w-full border border-gray-200 rounded-xl p-3 text-sm resize-none h-20 focus:outline-none focus:border-[#1a3c6e] disabled:opacity-50"
             />
             {error && <p className="text-red-500 text-sm mt-2">{error}</p>}
             <button
               onClick={handleVendorReview}
-              disabled={reviewing}
-              className="w-full mt-4 bg-[#1a3c6e] hover:bg-[#15306a] text-white font-semibold py-3 rounded-xl transition"
+              disabled={submitting}
+              className="w-full mt-4 bg-[#1a3c6e] hover:bg-[#15306a] text-white font-semibold py-3 rounded-xl transition disabled:opacity-50"
             >
-              {reviewing ? "جاري الإرسال..." : "إرسال التقييم"}
+              {submitting ? "جاري الإرسال..." : "إرسال التقييم"}
             </button>
           </>
         )}

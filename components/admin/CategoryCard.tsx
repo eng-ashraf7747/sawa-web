@@ -2,9 +2,9 @@
 
 "use client";
 
-import { useState } from "react";
 import { Category } from "@/types/category";
 import { toggleCategoryActive, deleteCategory } from "@/lib/categories";
+import { useAsyncAction } from "@/hooks/useAsyncAction";
 
 interface CategoryCardProps {
   category: Category;
@@ -13,30 +13,19 @@ interface CategoryCardProps {
 }
 
 export default function CategoryCard({ category, onEdit, onSelect }: CategoryCardProps) {
-  const [toggling, setToggling] = useState(false);
-  const [deleting, setDeleting] = useState(false);
+  const { run, loading } = useAsyncAction();
 
   const handleToggle = async () => {
-    setToggling(true);
-    try {
+    await run(async () => {
       await toggleCategoryActive(category.id, category.isActive);
-    } catch {
-      console.error("خطأ في تغيير حالة الفئة");
-    } finally {
-      setToggling(false);
-    }
+    });
   };
 
   const handleDelete = async () => {
     if (!confirm(`هل تريد حذف فئة "${category.name}" نهائياً؟`)) return;
-    setDeleting(true);
-    try {
+    await run(async () => {
       await deleteCategory(category.id);
-    } catch {
-      console.error("خطأ في حذف الفئة");
-    } finally {
-      setDeleting(false);
-    }
+    });
   };
 
   return (
@@ -66,7 +55,7 @@ export default function CategoryCard({ category, onEdit, onSelect }: CategoryCar
         <div className="flex gap-2">
           <button
             onClick={handleToggle}
-            disabled={toggling}
+            disabled={loading}
             className={`
               flex-1 text-xs font-medium py-2 rounded-lg transition-all disabled:opacity-50
               ${category.isActive
@@ -75,7 +64,7 @@ export default function CategoryCard({ category, onEdit, onSelect }: CategoryCar
               }
             `}
           >
-            {toggling ? "..." : category.isActive ? "تعطيل" : "تفعيل"}
+            {loading ? "..." : category.isActive ? "تعطيل" : "تفعيل"}
           </button>
 
           <button
@@ -87,10 +76,10 @@ export default function CategoryCard({ category, onEdit, onSelect }: CategoryCar
 
           <button
             onClick={handleDelete}
-            disabled={deleting}
+            disabled={loading}
             className="w-9 h-9 flex items-center justify-center rounded-lg bg-red-50 text-red-400 hover:bg-red-100 transition-all disabled:opacity-50"
           >
-            {deleting ? (
+            {loading ? (
               <svg className="w-3.5 h-3.5 animate-spin" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
                   d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />

@@ -2,9 +2,9 @@
 
 "use client";
 
-import { useState } from "react";
-import { Deal, DEAL_STATUS_LABELS } from "@/types/deal";
+import { Deal } from "@/types/deal";
 import { toggleDealActive, deleteDeal, approveDeal, rejectDeal } from "@/lib/deals";
+import { useAsyncAction } from "@/hooks/useAsyncAction";
 
 interface DealCardProps {
   deal: Deal;
@@ -12,52 +12,33 @@ interface DealCardProps {
 }
 
 export default function DealCard({ deal, onEdit }: DealCardProps) {
-  const [processing, setProcessing] = useState(false);
-  const [deleting, setDeleting] = useState(false);
+  const { run, loading } = useAsyncAction();
 
   const handleToggle = async () => {
-    setProcessing(true);
-    try {
+    await run(async () => {
       await toggleDealActive(deal.id, deal.status === "active");
-    } catch {
-      console.error("خطأ في تغيير حالة العرض");
-    } finally {
-      setProcessing(false);
-    }
+    });
   };
 
   const handleApprove = async () => {
-    setProcessing(true);
-    try {
+    if (!confirm(`هل تريد الموافقة على "${deal.title}"؟`)) return;
+    await run(async () => {
       await approveDeal(deal.id);
-    } catch {
-      console.error("خطأ في الموافقة");
-    } finally {
-      setProcessing(false);
-    }
+    });
   };
 
   const handleReject = async () => {
-    setProcessing(true);
-    try {
+    if (!confirm(`هل تريد رفض "${deal.title}"؟`)) return;
+    await run(async () => {
       await rejectDeal(deal.id);
-    } catch {
-      console.error("خطأ في الرفض");
-    } finally {
-      setProcessing(false);
-    }
+    });
   };
 
   const handleDelete = async () => {
     if (!confirm(`هل تريد حذف "${deal.title}" نهائياً؟`)) return;
-    setDeleting(true);
-    try {
+    await run(async () => {
       await deleteDeal(deal.id);
-    } catch {
-      console.error("خطأ في حذف العرض");
-    } finally {
-      setDeleting(false);
-    }
+    });
   };
 
   // ─── شريط الحالة ─────────────────────────────────────────
@@ -119,10 +100,10 @@ export default function DealCard({ deal, onEdit }: DealCardProps) {
           </button>
           <button
             onClick={handleDelete}
-            disabled={deleting}
+            disabled={loading}
             className="w-8 h-8 flex items-center justify-center rounded-lg bg-red-50 text-red-400 hover:bg-red-100 transition-all disabled:opacity-50"
           >
-            {deleting ? (
+            {loading ? (
               <svg className="w-3.5 h-3.5 animate-spin" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
                   d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
@@ -157,36 +138,36 @@ export default function DealCard({ deal, onEdit }: DealCardProps) {
             <>
               <button
                 onClick={handleApprove}
-                disabled={processing}
+                disabled={loading}
                 className="text-[10px] font-bold px-2 py-1 rounded-lg bg-green-500 text-white hover:bg-green-600 disabled:opacity-50 transition"
               >
-                {processing ? "..." : "موافقة"}
+                {loading ? "..." : "موافقة"}
               </button>
               <button
                 onClick={handleReject}
-                disabled={processing}
+                disabled={loading}
                 className="text-[10px] font-bold px-2 py-1 rounded-lg bg-red-500 text-white hover:bg-red-600 disabled:opacity-50 transition"
               >
-                {processing ? "..." : "رفض"}
+                {loading ? "..." : "رفض"}
               </button>
             </>
           )}
           {deal.status === "active" && (
             <button
               onClick={handleToggle}
-              disabled={processing}
+              disabled={loading}
               className="text-[10px] font-bold px-2 py-1 rounded-lg bg-red-50 text-red-500 hover:bg-red-100 disabled:opacity-50 transition"
             >
-              {processing ? "..." : "تعطيل"}
+              {loading ? "..." : "تعطيل"}
             </button>
           )}
           {deal.status === "inactive" && (
             <button
               onClick={handleToggle}
-              disabled={processing}
+              disabled={loading}
               className="text-[10px] font-bold px-2 py-1 rounded-lg bg-green-50 text-green-600 hover:bg-green-100 disabled:opacity-50 transition"
             >
-              {processing ? "..." : "تفعيل"}
+              {loading ? "..." : "تفعيل"}
             </button>
           )}
         </div>

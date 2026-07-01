@@ -6,6 +6,7 @@ import { useState } from "react";
 import { CreateDealInput } from "@/types/deal";
 import { useVendors } from "@/hooks/useVendors";
 import ImageUpload from "@/components/admin/ImageUpload";
+import { useAsyncAction } from "@/hooks/useAsyncAction";
 
 interface DealFormProps {
   categoryId: string;
@@ -29,6 +30,7 @@ export default function DealForm({
   vendorName,
 }: DealFormProps) {
   const { vendors } = useVendors();
+  const { run, loading } = useAsyncAction();
   const [title, setTitle] = useState(initialValues?.title ?? "");
   const [description, setDescription] = useState(initialValues?.description ?? "");
   const [discount, setDiscount] = useState(initialValues?.discount ?? "");
@@ -36,7 +38,6 @@ export default function DealForm({
   const [externalUrl, setExternalUrl] = useState(initialValues?.externalUrl ?? "");
   const [selectedVendorId, setSelectedVendorId] = useState(initialValues?.vendorId ?? "");
   const [order, setOrder] = useState(initialValues?.order ?? 1);
-  const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const handleSubmit = async () => {
@@ -44,33 +45,31 @@ export default function DealForm({
     if (!description.trim()) { setError("الوصف مطلوب"); return; }
     if (!discount.trim()) { setError("الخصم مطلوب"); return; }
 
-    setLoading(true);
     setError(null);
 
     const selectedVendor = vendors.find((v) => v.uid === selectedVendorId);
 
-    try {
-      await onSubmit({
-        categoryId,
-        vendorId: isVendor ? vendorId ?? null : selectedVendorId || null,
-        vendorName: isVendor
-          ? vendorName ?? null
-          : selectedVendor?.displayName ?? null,
-        title: title.trim(),
-        description: description.trim(),
-        discount: discount.trim(),
-        imageUrl: imageUrl || null,
-        externalUrl: externalUrl.trim() || null,
-        order,
-        status: isVendor ? "pending" : (initialValues?.status ?? "active"),
-        expiresAt: null,
-      });
-    } catch  {
-      setError("حدث خطأ — حاول مرة أخرى");
-
-    } finally {
-      setLoading(false);
-    }
+    await run(async () => {
+      try {
+        await onSubmit({
+          categoryId,
+          vendorId: isVendor ? vendorId ?? null : selectedVendorId || null,
+          vendorName: isVendor
+            ? vendorName ?? null
+            : selectedVendor?.displayName ?? null,
+          title: title.trim(),
+          description: description.trim(),
+          discount: discount.trim(),
+          imageUrl: imageUrl || null,
+          externalUrl: externalUrl.trim() || null,
+          order,
+          status: isVendor ? "pending" : (initialValues?.status ?? "active"),
+          expiresAt: null,
+        });
+      } catch {
+        setError("حدث خطأ — حاول مرة أخرى");
+      }
+    });
   };
 
   return (

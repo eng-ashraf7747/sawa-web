@@ -6,6 +6,7 @@ import { useState, useEffect } from "react";
 import { useActiveCategories } from "@/hooks/useCategories";
 import { getActiveSubcategories } from "@/lib/categories";
 import { useRequestActions } from "@/hooks/useRequests";
+import { useAsyncAction } from "@/hooks/useAsyncAction";
 import { Subcategory } from "@/types/category";
 import { MAX_REQUESTS_PER_USER } from "@/types/request";
 
@@ -25,7 +26,8 @@ export default function RequestModal({
   onSubmitted,
 }: Props) {
   const { categories } = useActiveCategories();
-  const { submit, loading, error } = useRequestActions();
+  const { submit, error: submitError } = useRequestActions();
+  const { run, loading } = useAsyncAction();
 
   const [selectedCategoryId, setSelectedCategoryId] = useState("");
   const [selectedCategoryName, setSelectedCategoryName] = useState("");
@@ -58,21 +60,23 @@ export default function RequestModal({
     if (!selectedSubcategoryId) { setValidationError("اختر فئة فرعية"); return; }
     if (!title.trim()) { setValidationError("اكتب عنوان الطلب"); return; }
 
-    const result = await submit({
-      userId,
-      userName,
-      categoryId: selectedCategoryId,
-      categoryName: selectedCategoryName,
-      subcategoryId: selectedSubcategoryId,
-      subcategoryName: selectedSubcategoryName,
-      title: title.trim(),
-      description: description.trim(),
-    });
+    await run(async () => {
+      const result = await submit({
+        userId,
+        userName,
+        categoryId: selectedCategoryId,
+        categoryName: selectedCategoryName,
+        subcategoryId: selectedSubcategoryId,
+        subcategoryName: selectedSubcategoryName,
+        title: title.trim(),
+        description: description.trim(),
+      });
 
-    if (result) {
-      setIsNew(result.isNew);
-      setSuccess(true);
-    }
+      if (result) {
+        setIsNew(result.isNew);
+        setSuccess(true);
+      }
+    });
   };
 
   if (success) {
@@ -203,16 +207,16 @@ export default function RequestModal({
             />
           </div>
 
-          {(validationError || error) && (
+          {(validationError || submitError) && (
             <p className="text-red-500 text-sm text-center">
-              {validationError ?? error}
+              {validationError ?? submitError}
             </p>
           )}
 
           <button
             onClick={handleSubmit}
             disabled={loading}
-            className="w-full bg-[#1a3c6e] hover:bg-[#15306a] text-white font-semibold py-3 rounded-xl transition"
+            className="w-full bg-[#1a3c6e] hover:bg-[#15306a] text-white font-semibold py-3 rounded-xl transition disabled:opacity-50"
           >
             {loading ? "جاري التسجيل..." : "سجّل طلبي"}
           </button>

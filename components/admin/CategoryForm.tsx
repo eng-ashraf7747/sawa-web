@@ -4,6 +4,7 @@
 
 import { useState } from "react";
 import { CreateCategoryInput } from "@/types/category";
+import { useAsyncAction } from "@/hooks/useAsyncAction";
 
 const EMOJI_SUGGESTIONS = [
   "🛒", "🏥", "📚", "💊", "🍎", "🥩", "👗", "💻",
@@ -24,11 +25,11 @@ export default function CategoryForm({
   onCancel,
   submitLabel = "إضافة",
 }: CategoryFormProps) {
+  const { run, loading } = useAsyncAction();
   const [name, setName] = useState(initialValues?.name ?? "");
   const [emoji, setEmoji] = useState(initialValues?.emoji ?? "🛒");
   const [subtitle, setSubtitle] = useState(initialValues?.subtitle ?? "");
   const [order, setOrder] = useState(initialValues?.order ?? 1);
-  const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const handleSubmit = async () => {
@@ -36,21 +37,20 @@ export default function CategoryForm({
     if (!emoji.trim()) { setError("الإيقونة مطلوبة"); return; }
     if (!subtitle.trim()) { setError("النص التعريفي مطلوب"); return; }
 
-    setLoading(true);
     setError(null);
-    try {
-      await onSubmit({
-        name: name.trim(),
-        emoji: emoji.trim(),
-        subtitle: subtitle.trim(),
-        order,
-        isActive: initialValues?.isActive ?? false,
-      });
-    } catch {
-      setError("حدث خطأ — حاول مرة أخرى");
-    } finally {
-      setLoading(false);
-    }
+    await run(async () => {
+      try {
+        await onSubmit({
+          name: name.trim(),
+          emoji: emoji.trim(),
+          subtitle: subtitle.trim(),
+          order,
+          isActive: initialValues?.isActive ?? false,
+        });
+      } catch {
+        setError("حدث خطأ — حاول مرة أخرى");
+      }
+    });
   };
 
   return (
