@@ -133,9 +133,15 @@ export default function VendorBookingCard({ booking, onUpdated }: Props) {
         </>
       )}
 
-      {(justDelivered || (booking.status !== "pending" && !showDeliverForm)) && booking.status === "pending" && (
+      {justDelivered && booking.status === "pending" && (
         <p className="text-green-600 text-xs font-semibold text-center py-2">
           تم تسجيل التسليم ✓
+        </p>
+      )}
+
+      {justCancelled && booking.status === "pending" && (
+        <p className="text-red-500 text-xs font-semibold text-center py-2">
+          تم إلغاء الطلب
         </p>
       )}
 
