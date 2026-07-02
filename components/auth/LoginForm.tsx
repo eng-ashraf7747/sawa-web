@@ -1,5 +1,7 @@
+// C:\sawa-web\components\auth\LoginForm.tsx
+
 "use client";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { loginWithEmail, loginWithGoogle } from "@/lib/auth";
 import { mapAuthError } from "@/lib/authErrors";
@@ -17,11 +19,26 @@ export default function LoginForm({ onSuccess, onSwitchToRegister, onForgotPassw
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const [termsAccepted, setTermsAccepted] = useState(false);
+  const [showTerms, setShowTerms] = useState(false);
+
+  useEffect(() => {
+    setShowTerms(localStorage.getItem("sawa_terms_accepted") !== "true");
+  }, []);
+
+  const handleTermsChange = (checked: boolean) => {
+    setTermsAccepted(checked);
+    if (checked) {
+      localStorage.setItem("sawa_terms_accepted", "true");
+      setError("");
+    }
+  };
 
   const handleLogin = async () => {
     if (!email.trim()) { setError("البريد الإلكتروني مطلوب"); return; }
     if (!isValidEmail(email)) { setError("بريد إلكتروني غير صالح"); return; }
     if (!password) { setError("كلمة المرور مطلوبة"); return; }
+    if (showTerms && !termsAccepted) { setError("يجب الموافقة على شروط الاستخدام"); return; }
     setLoading(true);
     setError("");
     try {
@@ -84,7 +101,31 @@ export default function LoginForm({ onSuccess, onSwitchToRegister, onForgotPassw
 
       {error && <p className="text-red-500 text-xs text-center mb-3">{error}</p>}
 
-      <button onClick={handleLogin} disabled={loading}
+      {/* شروط الاستخدام — أول مرة فقط */}
+      {showTerms && (
+        <div className="mb-4 flex items-start gap-2.5">
+          <input
+            type="checkbox"
+            id="terms-login"
+            checked={termsAccepted}
+            onChange={(e) => handleTermsChange(e.target.checked)}
+            className="mt-0.5 w-4 h-4 accent-[#1a3c6e] cursor-pointer flex-shrink-0"
+          />
+          <label htmlFor="terms-login" className="text-xs text-gray-500 cursor-pointer leading-relaxed">
+            أوافق على{" "}
+            <a
+              href="/legal/terms"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-[#1a3c6e] font-semibold hover:underline"
+            >
+              شروط الاستخدام
+            </a>
+          </label>
+        </div>
+      )}
+
+      <button onClick={handleLogin} disabled={loading || (showTerms && !termsAccepted)}
         className="w-full py-3.5 bg-[#1a3c6e] text-white rounded-xl font-bold text-sm hover:bg-[#0d2447] transition-colors cursor-pointer disabled:opacity-50">
         {loading ? "جاري..." : "تسجيل الدخول"}
       </button>
