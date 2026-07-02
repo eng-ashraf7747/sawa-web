@@ -14,6 +14,7 @@ import RequestsSection from "./RequestsSection";
 import PointsSection from "./PointsSection";
 import CategoryGrid from "@/components/home/CategoryGrid";
 import BookingCompletionModal from "./BookingCompletionModal";
+import BookingsFilters from "@/components/shared/BookingsFilters";
 import { Booking, BOOKING_STATUS_LABELS } from "@/types/booking";
 import { useState as useLocalState } from "react";
 
@@ -23,6 +24,7 @@ function BookingsSection() {
   const { bookings, loading, error } = useUserBookings();
   const { complete } = useBookingActions();
   const [selectedBooking, setSelectedBooking] = useLocalState <Booking | null>(null);
+  const [filteredBookings, setFilteredBookings] = useLocalState<Booking[]>([]);
 
   if (loading) {
     return (
@@ -46,6 +48,8 @@ function BookingsSection() {
     );
   }
 
+  const hasFilteredResults = filteredBookings.length > 0;
+
   const statusColors: Record <string, string> = {
     pending:   "bg-yellow-100 text-yellow-700",
     delivered: "bg-blue-100 text-blue-700",
@@ -55,32 +59,47 @@ function BookingsSection() {
 
   return (
     <>
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-        {bookings.map((booking) => (
-          <div key={booking.id} className="bg-white rounded-2xl shadow-sm border border-gray-100 p-4">
-            <div className="flex items-start justify-between mb-3">
-              <p className="font-bold text-[#1a3c6e] text-sm">{booking.dealTitle}</p>
-              <span className={`text-xs font-semibold px-2 py-1 rounded-full ${statusColors[booking.status]}`}>
-                {BOOKING_STATUS_LABELS[booking.status]}
-              </span>
+      <BookingsFilters
+        allBookings={bookings}
+        onFilterChange={setFilteredBookings}
+      />
+
+      {!hasFilteredResults && (
+        <div className="flex flex-col items-center justify-center py-16 text-center">
+          <span className="text-5xl mb-4">🔍</span>
+          <p className="text-[#6b7280] text-sm font-medium">لا توجد حجوزات تطابق الفلتر المحدد</p>
+          <p className="text-[#c9a84c] text-xs mt-1">جرب تغيير الحالات أو الفترة الزمنية</p>
+        </div>
+      )}
+
+      {hasFilteredResults && (
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+          {filteredBookings.map((booking) => (
+            <div key={booking.id} className="bg-white rounded-2xl shadow-sm border border-gray-100 p-4">
+              <div className="flex items-start justify-between mb-3">
+                <p className="font-bold text-[#1a3c6e] text-sm">{booking.dealTitle}</p>
+                <span className={`text-xs font-semibold px-2 py-1 rounded-full ${statusColors[booking.status]}`}>
+                  {BOOKING_STATUS_LABELS[booking.status]}
+                </span>
+              </div>
+              {booking.orderValue && (
+                <p className="text-sm text-gray-600 mb-3">
+                  قيمة الطلب:
+                  <span className="font-bold text-[#1a3c6e] mr-1">{booking.orderValue} جنيه</span>
+                </p>
+              )}
+              {booking.status === "delivered" && (
+                <button
+                  onClick={() => setSelectedBooking(booking)}
+                  className="w-full bg-[#1a3c6e] hover:bg-[#15306a] text-white text-sm font-semibold py-2 rounded-xl transition"
+                >
+                  تأكيد الاستلام وتقييم التجربة
+                </button>
+              )}
             </div>
-            {booking.orderValue && (
-              <p className="text-sm text-gray-600 mb-3">
-                قيمة الطلب:
-                <span className="font-bold text-[#1a3c6e] mr-1">{booking.orderValue} جنيه</span>
-              </p>
-            )}
-            {booking.status === "delivered" && (
-              <button
-                onClick={() => setSelectedBooking(booking)}
-                className="w-full bg-[#1a3c6e] hover:bg-[#15306a] text-white text-sm font-semibold py-2 rounded-xl transition"
-              >
-                تأكيد الاستلام وتقييم التجربة
-              </button>
-            )}
-          </div>
-        ))}
-      </div>
+          ))}
+        </div>
+      )}
 
       {selectedBooking && (
         <BookingCompletionModal
