@@ -8,6 +8,7 @@ import { useVendorBookings } from "@/hooks/useBookings";
 import VendorLayout from "@/components/vendor/VendorLayout";
 import VendorBookingCard from "@/components/vendor/VendorBookingCard";
 import VendorReviewModal from "@/components/vendor/VendorReviewModal";
+import BookingsFilters from "@/components/shared/BookingsFilters";
 import { Booking } from "@/types/booking";
 
 export default function VendorBookingsPage() {
@@ -16,6 +17,7 @@ export default function VendorBookingsPage() {
     isAuthorized && vendorId ? vendorId : ""
   );
   const [reviewBooking, setReviewBooking] = useState <Booking | null>(null);
+  const [filteredBookings, setFilteredBookings] = useState<Booking[]>([]);
 
   if (authLoading) {
     return (
@@ -26,6 +28,9 @@ export default function VendorBookingsPage() {
   }
 
   if (!isAuthorized) return null;
+
+  const hasBookings = bookings.length > 0;
+  const hasFilteredResults = filteredBookings.length > 0;
 
   return (
     <VendorLayout title="الحجوزات">
@@ -46,7 +51,7 @@ export default function VendorBookingsPage() {
           <div className="text-center py-16 text-red-400 text-sm">{error}</div>
         )}
 
-        {!loading && !error && bookings.length === 0 && (
+        {!loading && !error && !hasBookings && (
           <div className="flex flex-col items-center justify-center py-16 text-center">
             <span className="text-5xl mb-4">📋</span>
             <p className="text-[#6b7280] text-sm font-medium">
@@ -58,20 +63,41 @@ export default function VendorBookingsPage() {
           </div>
         )}
 
-        {!loading && bookings.length > 0 && (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-            {bookings.map((booking) => (
-              <VendorBookingCard
-                key={booking.id}
-                booking={booking}
-                onUpdated={() => {
-                  if (booking.status === "pending") {
-                    setReviewBooking(booking);
-                  }
-                }}
-              />
-            ))}
-          </div>
+        {!loading && !error && hasBookings && (
+          <>
+            <BookingsFilters
+              allBookings={bookings}
+              onFilterChange={setFilteredBookings}
+            />
+
+            {!hasFilteredResults && (
+              <div className="flex flex-col items-center justify-center py-16 text-center">
+                <span className="text-5xl mb-4">🔍</span>
+                <p className="text-[#6b7280] text-sm font-medium">
+                  لا توجد حجوزات تطابق الفلتر المحدد
+                </p>
+                <p className="text-[#c9a84c] text-xs mt-1">
+                  جرب تغيير الحالات أو الفترة الزمنية
+                </p>
+              </div>
+            )}
+
+            {hasFilteredResults && (
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                {filteredBookings.map((booking) => (
+                  <VendorBookingCard
+                    key={booking.id}
+                    booking={booking}
+                    onUpdated={() => {
+                      if (booking.status === "pending") {
+                        setReviewBooking(booking);
+                      }
+                    }}
+                  />
+                ))}
+              </div>
+            )}
+          </>
         )}
 
         {reviewBooking && (
