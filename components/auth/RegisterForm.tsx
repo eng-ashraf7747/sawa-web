@@ -1,3 +1,5 @@
+// C:\sawa-web\components\auth\RegisterForm.tsx
+
 "use client";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
@@ -22,6 +24,7 @@ export default function RegisterForm({ onSuccess, onSwitchToLogin }: RegisterFor
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [referralCode, setReferralCode] = useState("");
+  const [termsAccepted, setTermsAccepted] = useState(false);
   const [loading, setLoading] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
 
@@ -38,6 +41,7 @@ export default function RegisterForm({ onSuccess, onSwitchToLogin }: RegisterFor
       password: validateRegisterField("password", password),
       confirmPassword: validateRegisterField("confirmPassword", confirmPassword, password),
       referralCode: validateRegisterField("referralCode", referralCode),
+      termsAccepted: validateRegisterField("termsAccepted", termsAccepted),
     };
     setErrors(newErrors);
     if (Object.values(newErrors).some(e => e !== "")) return;
@@ -168,7 +172,35 @@ export default function RegisterForm({ onSuccess, onSwitchToLogin }: RegisterFor
 
       {errors.general && <p className="text-red-500 text-xs text-center mb-3">{errors.general}</p>}
 
-      <button onClick={handleRegister} disabled={loading}
+      {/* شروط الاستخدام */}
+      <div className="mb-4 flex items-start gap-2.5">
+        <input
+          type="checkbox"
+          id="terms-register"
+          checked={termsAccepted}
+          onChange={(e) => {
+            setTermsAccepted(e.target.checked);
+            if (e.target.checked) {
+              setErrors(prev => ({ ...prev, termsAccepted: "" }));
+            }
+          }}
+          className="mt-1 w-4 h-4 accent-[#1a3c6e] cursor-pointer flex-shrink-0"
+        />
+        <label htmlFor="terms-register" className="text-xs text-gray-500 cursor-pointer leading-relaxed">
+          أوافق على{" "}
+          <a
+            href="/legal/terms"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-[#1a3c6e] font-semibold hover:underline"
+          >
+            شروط الاستخدام
+          </a>
+        </label>
+      </div>
+      {errors.termsAccepted && <p className="text-red-500 text-xs mb-3 text-right -mt-2">{errors.termsAccepted}</p>}
+
+      <button onClick={handleRegister} disabled={loading || !termsAccepted}
         className="w-full py-3.5 bg-[#1a3c6e] text-white rounded-xl font-bold text-sm hover:bg-[#0d2447] transition-colors cursor-pointer disabled:opacity-50">
         {loading ? "جاري..." : "إنشاء الحساب"}
       </button>
