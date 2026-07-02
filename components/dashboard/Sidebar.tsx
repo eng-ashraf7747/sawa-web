@@ -1,5 +1,4 @@
 // C:\sawa-web\components\dashboard\Sidebar.tsx
-
 "use client";
 import { useState } from "react";
 import Image from "next/image";
@@ -149,6 +148,13 @@ export default function Sidebar({ userData, activePage, onNavigate }: SidebarPro
             <div className="flex flex-col gap-0.5">
               <NavItem id="profile" label="بياناتي" onClick={() => onNavigate("profile")} isChild />
               <NavItem id="points" label="سجل نقاطي" onClick={() => onNavigate("points")} isChild />
+              <a
+                href="/legal/terms"
+                className="w-full flex items-center gap-3 px-4 py-2 pr-10 text-white/70 hover:bg-white/10 hover:text-white transition-all text-right rounded-xl text-xs cursor-pointer"
+              >
+                <span>📄</span>
+                <span>شروط الاستخدام</span>
+              </a>
             </div>
           )}
         </nav>
@@ -168,7 +174,7 @@ export default function Sidebar({ userData, activePage, onNavigate }: SidebarPro
       {/* Mobile Bottom Navigation */}
       <nav
         className="md:hidden fixed bottom-0 left-0 right-0 z-50 flex items-center justify-around px-2 py-2 border-t border-white/10"
-        style={{ background: "linear-gradient(180deg, #1a3c6e 0%, #0f2447 100%)" }}
+        style={{ background: "linear-gradient(180deg, #1a3c6e 0%, #0f247 100%)" }}
       >
         <button
           onClick={() => onNavigate("home")}
