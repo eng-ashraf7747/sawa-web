@@ -1,5 +1,4 @@
 // C:\sawa-web\components\home\Hero.tsx
-
 import Image from "next/image";
 
 interface HeroProps {
@@ -28,9 +27,12 @@ export default function Hero({ onRegisterClick }: HeroProps) {
           >
             🚀 ابدأ مجاناً
           </button>
-          <button className="border-2 border-[#1a3c6e] text-[#1a3c6e] px-5 md:px-7 py-3.5 rounded-xl font-semibold text-base hover:bg-[#f8f9fb] transition-all cursor-pointer">
-            اعرف أكتر
-          </button>
+          <a
+            href="/legal/terms"
+            className="border-2 border-[#1a3c6e] text-[#1a3c6e] px-5 md:px-7 py-3.5 rounded-xl font-semibold text-base hover:bg-[#f8f9fb] transition-all inline-block text-center"
+          >
+            شروط الاستخدام
+          </a>
         </div>
         <div className="flex items-center gap-5 flex-wrap justify-center md:justify-start">
           {["🔒 تسجيل آمن", "✅ مجاني 100%", "⚡ في 30 ثانية"].map((t, i) => (
