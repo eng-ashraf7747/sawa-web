@@ -7,6 +7,7 @@ import AdminLayout from "@/components/admin/AdminLayout";
 import { useAdminGuard } from "@/hooks/useAdminGuard";
 import { useExecutiveDashboard } from "@/hooks/useExecutiveDashboard";
 import { exportToExcel } from "@/lib/exportExcel";
+import { formatDateToLocal } from "@/lib/bookings";
 
 function DateRangePicker({
   startDate,
@@ -19,15 +20,13 @@ function DateRangePicker({
   onStartChange: (d: Date) => void;
   onEndChange: (d: Date) => void;
 }) {
-  const fmt = (d: Date) => d.toISOString().split("T")[0];
-
   return (
     <div className="flex flex-wrap items-center gap-3" dir="rtl">
       <div className="flex items-center gap-2">
         <label className="text-sm text-slate-500">من:</label>
         <input
           type="date"
-          value={fmt(startDate)}
+          value={formatDateToLocal(startDate)}
           onChange={(e) => onStartChange(new Date(e.target.value))}
           className="border border-slate-200 rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:border-[#1a3c6e] [direction:ltr]"
         />
@@ -36,7 +35,7 @@ function DateRangePicker({
         <label className="text-sm text-slate-500">إلى:</label>
         <input
           type="date"
-          value={fmt(endDate)}
+          value={formatDateToLocal(endDate)}
           onChange={(e) => onEndChange(new Date(e.target.value))}
           className="border border-slate-200 rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:border-[#1a3c6e] [direction:ltr]"
         />
