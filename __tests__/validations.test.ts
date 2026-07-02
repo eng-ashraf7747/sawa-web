@@ -7,6 +7,7 @@ import {
   isValidReferralCode,
   getPasswordStrength,
   validateRegisterField,
+  isValidTermsAccepted,
 } from "@/lib/validations";
 
 // ─── isValidEmail ─────────────────────────────────────────────
@@ -119,3 +120,43 @@ describe("validateRegisterField", () => {
     expect(validateRegisterField("confirmPassword", "different", "Abc12345")).toBe("كلمات المرور غير متطابقة");
   });
 });
+  // ─── Terms Accepted ─────────────────────────────────────
+  describe("isValidTermsAccepted", () => {
+    it("يرجع true لقيمة true", () => {
+      expect(isValidTermsAccepted(true)).toBe(true);
+    });
+
+    it("يرجع true لقيمة 'true' كنص", () => {
+      expect(isValidTermsAccepted("true")).toBe(true);
+    });
+
+    it("يرجع false لقيمة false", () => {
+      expect(isValidTermsAccepted(false)).toBe(false);
+    });
+
+    it("يرجع false لقيمة 'false' كنص", () => {
+      expect(isValidTermsAccepted("false")).toBe(false);
+    });
+
+    it("يرجع false لقيمة فارغة", () => {
+      expect(isValidTermsAccepted("")).toBe(false);
+    });
+  });
+
+  describe("validateRegisterField - termsAccepted", () => {
+    it("يرجع خطأ عند false", () => {
+      expect(validateRegisterField("termsAccepted", false)).toBe("يجب الموافقة على شروط الاستخدام");
+    });
+
+    it("يرجع خطأ عند string فارغ", () => {
+      expect(validateRegisterField("termsAccepted", "")).toBe("يجب الموافقة على شروط الاستخدام");
+    });
+
+    it("يرجع فارغ عند true", () => {
+      expect(validateRegisterField("termsAccepted", true)).toBe("");
+    });
+
+    it("يرجع فارغ عند 'true' كنص", () => {
+      expect(validateRegisterField("termsAccepted", "true")).toBe("");
+    });
+  });
