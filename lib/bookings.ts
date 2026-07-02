@@ -303,3 +303,78 @@ export async function getVendorRatingAverage(
     throw new Error("تعذر حساب متوسط التقييم");
   }
 }
+// ==========================================
+// دوال فلترة الحجوزات (Client-Side)
+// ==========================================
+
+/**
+ * تحويل التاريخ إلى نص بصيغة YYYY-MM-DD بالتوقيت المحلي
+ * لتجنب مشكلة التحويل التلقائي لتوقيت جرينشت (UTC)
+ */
+export function formatDateToLocal(date: Date | null | undefined): string {
+  if (!date || !(date instanceof Date)) return "";
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+}
+
+/**
+ * الحصول على النطاق الزمني الافتراضي
+ * يعيد نفس اليوم من الشهر الماضي إلى اليوم الحالي
+ */
+export function getDefaultDateRange(): { from: string; to: string } {
+  const now = new Date();
+  const from = new Date(now.getFullYear(), now.getMonth() - 1, now.getDate());
+  return {
+    from: formatDateToLocal(from),
+    to: formatDateToLocal(now),
+  };
+}
+
+/**
+ * استخراج تاريخ الحجز كنص محلي
+ * يدعم أنواع التواريخ المختلفة (Firebase Timestamp, Date, String)
+ */
+function extractLocalDateStr(createdAt: any): string {
+  if (!createdAt) return "";
+  let date: Date | null = null;
+  
+  if (createdAt.toDate && typeof createdAt.toDate === "function") {
+    date = createdAt.toDate(); // حالة Firestore Timestamp
+  } else if (createdAt instanceof Date) {
+    date = createdAt;
+  } else if (typeof createdAt === "string") {
+    date = new Date(createdAt);
+  }
+  
+  return formatDateToLocal(date);
+}
+
+/**
+ * فلترة مصفوفة الحجوزات بناءً على الحالات المحددة والنطاق الزمني
+ * ملاحظة: تم استخدام any[] لتجنب أخطاء الترجمة المؤقتة
+ * يُرجى استبدالها بنوع Booking[] لاحقاً بعد التأكد من التوافق
+ */
+export function filterBookings(
+  bookings: any[],
+  selectedStatuses: string[],
+  fromDate: string,
+  toDate: string
+): any[] {
+  if (!bookings || bookings.length === 0) return [];
+
+  return bookings.filter((booking) => {
+    // 1. التحقق من الحالة (لو مفيش حالات محددة، يعرض الكل)
+    if (selectedStatuses.length > 0 && !selectedStatuses.includes(booking.status)) {
+      return false;
+    }
+
+    // 2. التحقق من التاريخ
+    const bookingDateStr = extractLocalDateStr(booking.createdAt);
+    if (fromDate && bookingDateStr < fromDate) return false;
+    if (toDate && bookingDateStr > toDate) return false;
+
+    return true;
+  });
+}
