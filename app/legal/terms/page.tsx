@@ -36,18 +36,18 @@ export default function TermsPage() {
       <header className="bg-white border-b border-gray-100 px-4 md:px-6 lg:px-8 py-3 sticky top-0 z-40">
         <div className="max-w-6xl mx-auto flex items-center justify-between">
           <a href="/" className="flex items-center gap-2 hover:opacity-80 transition">
-            <img src="/Sawa-logo.png" alt="سوا" className="h-8" />
-            <span className="text-[#1a3c6e] font-bold text-lg hidden sm:inline">سوا</span>
+            <img src="/Sawa-logo.png" alt="سوا" className="h-7 sm:h-8" />
+            <span className="text-[#1a3c6e] font-bold text-base sm:text-lg hidden sm:inline">سوا</span>
           </a>
-          <h1 className="text-[#1a3c6e] font-bold text-sm md:text-base">شروط الاستخدام</h1>
+          <h1 className="text-[#1a3c6e] font-bold text-xs sm:text-sm md:text-base">شروط الاستخدام</h1>
         </div>
       </header>
 
-      {/* ─── زر الفهرس العائم — موبايل فقط ─────────────── */}
-      <div className="lg:hidden fixed bottom-20 right-4 z-50">
+      {/* ─── زر الفهرس العائم — موبايل/تابلت فقط ────────── */}
+      <div className="lg:hidden fixed bottom-20 right-3 sm:right-4 z-50">
         <button
           onClick={() => setMobileTocOpen(!mobileTocOpen)}
-          className="bg-[#1a3c6e] text-white w-12 h-12 rounded-full flex items-center justify-center shadow-lg transition hover:bg-[#15306a]"
+          className="bg-[#1a3c6e] text-white w-11 h-11 sm:w-12 sm:h-12 rounded-full flex items-center justify-center shadow-lg transition hover:bg-[#15306a]"
           aria-label="فهرس المحتوى"
         >
           <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -56,16 +56,16 @@ export default function TermsPage() {
         </button>
       </div>
 
-      {/* ─── قائمة الفهرس المنبثقة — موبايل فقط ──────────── */}
+      {/* ─── قائمة الفهرس المنبثقة — موبايل/تابلت فقط ──── */}
       {mobileTocOpen && (
         <div className="lg:hidden fixed inset-0 z-40 bg-black/40" onClick={() => setMobileTocOpen(false)}>
           <div
-            className="absolute bottom-32 right-4 bg-white rounded-2xl shadow-xl p-4 w-72 max-h-[60vh] overflow-y-auto"
+            className="absolute bottom-28 sm:bottom-32 right-3 sm:right-4 bg-white rounded-2xl shadow-xl p-3 sm:p-4 w-64 sm:w-72 max-h-[55vh] sm:max-h-[60vh] overflow-y-auto"
             onClick={(e) => e.stopPropagation()}
           >
             <a
               href="/"
-              className="flex items-center gap-2 text-sm font-semibold text-[#c9a84c] hover:underline mb-3 pb-3 border-b border-gray-100"
+              className="flex items-center gap-2 text-sm font-semibold text-[#c9a84c] hover:underline mb-2 sm:mb-3 pb-2 sm:pb-3 border-b border-gray-100"
             >
               <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
@@ -78,13 +78,13 @@ export default function TermsPage() {
                   key={section.id}
                   href={`#${section.id}`}
                   onClick={() => setMobileTocOpen(false)}
-                  className={`flex items-start gap-2.5 text-sm py-2 px-2 rounded-lg transition ${
+                  className={`flex items-start gap-2.5 text-xs sm:text-sm py-1.5 sm:py-2 px-2 rounded-lg transition ${
                     activeSection === section.id
                       ? "bg-[#1a3c6e]/10 text-[#1a3c6e] font-semibold"
                       : "text-gray-600 hover:bg-gray-50"
                   }`}
                 >
-                  <span className={`w-2 h-2 rounded-full mt-1.5 flex-shrink-0 ${
+                  <span className={`w-1.5 h-1.5 sm:w-2 sm:h-2 rounded-full mt-1 sm:mt-1.5 flex-shrink-0 ${
                     activeSection === section.id ? "bg-[#c9a84c]" : "bg-gray-300"
                   }`} />
                   {section.title}
@@ -96,37 +96,10 @@ export default function TermsPage() {
       )}
 
       {/* ─── التخطيط الرئيسي ────────────────────────────── */}
-      <div className="max-w-6xl mx-auto px-4 md:px-6 lg:px-8 py-8 md:py-12 flex gap-8">
+      <div className="max-w-6xl mx-auto px-4 md:px-6 lg:px-8 py-6 sm:py-8 md:py-12 flex gap-6 lg:gap-8">
 
-        {/* ─── المحتوى ──────────────────────────────────── */}
-        <main className="flex-1 min-w-0 max-w-[800px] mx-auto lg:mx-0">
-          <p className="text-xs text-gray-400 mb-4">آخر تحديث: {LEGAL_TERMS_LAST_UPDATED}</p>
-
-          <div className="space-y-6">
-            {LEGAL_TERMS.map((section) => (
-              <section
-                key={section.id}
-                id={section.id}
-                ref={(el) => { sectionRefs.current[section.id] = el; }}
-                className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5 md:p-6 scroll-mt-16"
-              >
-                <h2 className="text-[#1a3c6e] font-bold text-base md:text-lg mb-3">
-                  {section.title}
-                </h2>
-                <div className="text-gray-600 text-sm md:text-base leading-relaxed md:leading-loose whitespace-pre-line">
-                  {section.content}
-                </div>
-              </section>
-            ))}
-          </div>
-
-          <p className="text-xs text-gray-400 text-center pt-6">
-            جميع الحقوق محفوظة لمنصة سوا &copy; {new Date().getFullYear()}
-          </p>
-        </main>
-
-        {/* ─── الفهرس الجانبي — ديسكتوب فقط ────────────── */}
-        <aside className="hidden lg:block w-64 flex-shrink-0">
+        {/* ─── الفهرس الجانبي — ديسكتوب فقط (يمين في RTL) ── */}
+        <aside className="hidden lg:block w-60 xl:w-64 flex-shrink-0 order-1">
           <div className="sticky top-16">
             <a
               href="/"
@@ -161,12 +134,39 @@ export default function TermsPage() {
           </div>
         </aside>
 
+        {/* ─── المحتوى (يسار في RTL) ─────────────────────── */}
+        <main className="flex-1 min-w-0 max-w-[800px] mx-auto lg:mx-0 order-2">
+          <p className="text-[11px] sm:text-xs text-gray-400 mb-3 sm:mb-4">آخر تحديث: {LEGAL_TERMS_LAST_UPDATED}</p>
+
+          <div className="space-y-4 sm:space-y-6">
+            {LEGAL_TERMS.map((section) => (
+              <section
+                key={section.id}
+                id={section.id}
+                ref={(el) => { sectionRefs.current[section.id] = el; }}
+                className="bg-white rounded-xl sm:rounded-2xl border border-gray-100 shadow-sm p-4 sm:p-5 md:p-6 scroll-mt-16 select-none"
+              >
+                <h2 className="text-[#1a3c6e] font-bold text-sm sm:text-base md:text-lg mb-2 sm:mb-3">
+                  {section.title}
+                </h2>
+                <div className="text-gray-600 text-xs sm:text-sm md:text-base leading-relaxed sm:leading-relaxed md:leading-loose whitespace-pre-line">
+                  {section.content}
+                </div>
+              </section>
+            ))}
+          </div>
+
+          <p className="text-[11px] sm:text-xs text-gray-400 text-center pt-4 sm:pt-6">
+            جميع الحقوق محفوظة لمنصة سوا &copy; {new Date().getFullYear()}
+          </p>
+        </main>
+
       </div>
 
       {/* ─── زر العودة للأعلى ───────────────────────────── */}
       <a
         href="#top"
-        className="fixed bottom-6 left-6 md:bottom-8 md:left-8 bg-[#1a3c6e] hover:bg-[#15306a] text-white w-10 h-10 md:w-12 md:h-12 rounded-full flex items-center justify-center shadow-lg transition z-50"
+        className="fixed bottom-4 sm:bottom-6 left-3 sm:left-6 md:bottom-8 md:left-8 bg-[#1a3c6e] hover:bg-[#15306a] text-white w-10 h-10 sm:w-11 sm:h-11 md:w-12 md:h-12 rounded-full flex items-center justify-center shadow-lg transition z-50"
         aria-label="العودة للأعلى"
       >
         <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
