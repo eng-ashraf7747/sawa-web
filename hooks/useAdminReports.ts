@@ -102,7 +102,7 @@ export function useBookingsList(filters?: BookingFilters) {
     }
   };
 
-  useEffect(() => { load(); }, []);
+  useEffect(() => { load(); }, [filters ? JSON.stringify(filters) : ""]);
 
   return { bookings, loading, error, reload: load };
 }
