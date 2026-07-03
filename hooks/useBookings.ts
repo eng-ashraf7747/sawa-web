@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { useUser } from "@/hooks/useUser";
+import { useAsyncAction } from "@/hooks/useAsyncAction";
 import {
   getUserBookings,
   getVendorBookings,
@@ -19,17 +20,34 @@ import {
 // ===== حجوزات المستخدم =====
 export function useUserBookings() {
   const { userData } = useUser();
-  const [bookings, setBookings] = useState <Booking[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState <string | null>(null);
+  const [bookings, setBookings] = useState<Booking[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    if (!userData?.uid) return;
-    setLoading(true);
-    getUserBookings(userData.uid)
-      .then(setBookings)
-      .catch(() => setError("تعذر جلب الحجوزات"))
-      .finally(() => setLoading(false));
+    if (!userData?.uid) {
+      setBookings([]);
+      return;
+    }
+
+    let isActive = true;
+
+    const load = async () => {
+      setLoading(true);
+      setError(null);
+      try {
+        const data = await getUserBookings(userData.uid);
+        if (isActive) setBookings(data);
+      } catch {
+        if (isActive) setError("تعذر جلب الحجوزات");
+      } finally {
+        if (isActive) setLoading(false);
+      }
+    };
+
+    load();
+
+    return () => { isActive = false; };
   }, [userData?.uid]);
 
   return { bookings, loading, error };
@@ -37,85 +55,87 @@ export function useUserBookings() {
 
 // ===== حجوزات المورد =====
 export function useVendorBookings(vendorId: string) {
-  const [bookings, setBookings] = useState <Booking[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState <string | null>(null);
+  const [bookings, setBookings] = useState<Booking[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    if (!vendorId) return;
-    setLoading(true);
-    getVendorBookings(vendorId)
-      .then(setBookings)
-      .catch(() => setError("تعذر جلب الحجوزات"))
-      .finally(() => setLoading(false));
+    if (!vendorId) {
+      setBookings([]);
+      return;
+    }
+
+    let isActive = true;
+
+    const load = async () => {
+      setLoading(true);
+      setError(null);
+      try {
+        const data = await getVendorBookings(vendorId);
+        if (isActive) setBookings(data);
+      } catch {
+        if (isActive) setError("تعذر جلب الحجوزات");
+      } finally {
+        if (isActive) setLoading(false);
+      }
+    };
+
+    load();
+
+    return () => { isActive = false; };
   }, [vendorId]);
 
   return { bookings, loading, error };
 }
 
-// ===== إجراءات الحجز =====
+// ===== إجراءات الحجز (محسنة بـ useAsyncAction) =====
 export function useBookingActions() {
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState <string | null>(null);
+  const { run, loading, error: actionError } = useAsyncAction();
 
-  const book = async (input: CreateBookingInput): Promise <string | null> => {
-    setLoading(true);
-    setError(null);
-    try {
-      const id = await createBooking(input);
-      return id;
-    } catch {
-      setError("تعذر إنشاء الحجز");
-      return null;
-    } finally {
-      setLoading(false);
-    }
+  const book = async (input: CreateBookingInput): Promise<string | null> => {
+    let result: string | null = null;
+    await run(async () => {
+      result = await createBooking(input);
+    });
+    return result;
   };
 
   const deliver = async (
     bookingId: string,
     input: DeliverBookingInput
-  ): Promise <boolean> => {
-    setLoading(true);
-    setError(null);
-    try {
+  ): Promise<boolean> => {
+    let success = false;
+    await run(async () => {
       await markDelivered(bookingId, input);
-      return true;
-    } catch {
-      setError("تعذر تسجيل التسليم");
-      return false;
-    } finally {
-      setLoading(false);
-    }
+      success = true;
+    });
+    return success;
   };
 
-  const complete = async (bookingId: string): Promise <boolean> => {
-    setLoading(true);
-    setError(null);
-    try {
+  const complete = async (bookingId: string): Promise<boolean> => {
+    let success = false;
+    await run(async () => {
       await markCompleted(bookingId);
-      return true;
-    } catch {
-      setError("تعذر تأكيد الاستلام");
-      return false;
-    } finally {
-      setLoading(false);
-    }
+      success = true;
+    });
+    return success;
   };
 
-  const cancel = async (bookingId: string): Promise <boolean> => {
-    setLoading(true);
-    setError(null);
-    try {
+  const cancel = async (bookingId: string): Promise<boolean> => {
+    let success = false;
+    await run(async () => {
       await cancelBooking(bookingId);
-      return true;
-    } catch {
-      setError("تعذر إلغاء الحجز");
-      return false;
-    } finally {
-      setLoading(false);
-    }
+      success = true;
+    });
+    return success;
   };
 
-  return { book, deliver, complete, cancel, loading, error };
+  return { 
+    book, 
+    deliver, 
+    complete, 
+    cancel, 
+    loading, 
+    error: actionError 
+  };
 }
