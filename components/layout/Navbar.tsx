@@ -29,7 +29,7 @@ export default function Navbar({ onLoginClick }: NavbarProps) {
         </a>
 
         <div className="hidden md:flex items-center gap-1 flex-1 justify-center">
-          {["الخدمات", "كيف تعمل؟", "العضوية", "لأصحاب الأعمال"].map((item, i) => (
+          {["كيف تعمل؟", "العضوية", "لأصحاب الأعمال", "تواصل معنا"].map((item, i) => (
             <a key={i} href="#"
               className="text-sm text-[#6b7280] px-3 py-2 rounded-lg hover:text-[#111827] hover:bg-[#f8f9fb] transition-all whitespace-nowrap flex items-center gap-1">
               {item}
