@@ -1,4 +1,5 @@
 // C:\sawa-web\components\dashboard\Sidebar.tsx
+
 "use client";
 import { useState } from "react";
 import Image from "next/image";
@@ -149,6 +150,13 @@ export default function Sidebar({ userData, activePage, onNavigate }: SidebarPro
               <NavItem id="profile" label="بياناتي" onClick={() => onNavigate("profile")} isChild />
               <NavItem id="points" label="سجل نقاطي" onClick={() => onNavigate("points")} isChild />
               <a
+                href="/contact"
+                className="w-full flex items-center gap-3 px-4 py-2 pr-10 text-white/70 hover:bg-white/10 hover:text-white transition-all text-right rounded-xl text-xs cursor-pointer"
+              >
+                <span>💬</span>
+                <span>تواصل معنا</span>
+              </a>
+              <a
                 href="/legal/terms"
                 className="w-full flex items-center gap-3 px-4 py-2 pr-10 text-white/70 hover:bg-white/10 hover:text-white transition-all text-right rounded-xl text-xs cursor-pointer"
               >
@@ -159,8 +167,15 @@ export default function Sidebar({ userData, activePage, onNavigate }: SidebarPro
           )}
         </nav>
 
-        {/* Logout */}
-        <div className="px-3 py-4 border-t border-white/10">
+        {/* Contact + Logout */}
+        <div className="px-3 py-4 border-t border-white/10 flex flex-col gap-1">
+          <a
+            href="/contact"
+            className="w-full flex items-center gap-3 px-4 py-2.5 rounded-xl text-white/70 hover:bg-white/10 hover:text-white transition-all text-right cursor-pointer"
+          >
+            <span>💬</span>
+            <span className="text-sm">تواصل معنا</span>
+          </a>
           <button
             onClick={handleLogout}
             className="w-full flex items-center gap-3 px-4 py-2.5 rounded-xl text-red-300 hover:bg-red-500/20 hover:text-red-200 transition-all cursor-pointer"
@@ -227,11 +242,21 @@ export default function Sidebar({ userData, activePage, onNavigate }: SidebarPro
         </button>
 
         <button
+          onClick={() => onNavigate("contact")}
+          className={`flex flex-col items-center gap-0.5 px-3 py-1.5 rounded-xl transition-all ${
+            activePage === "contact" ? "text-[#c9a84c]" : "text-white/60"
+          }`}
+        >
+          <span className="text-xl">💬</span>
+          <span className="text-[10px]">تواصل</span>
+        </button>
+
+        <button
           onClick={handleLogout}
           className="flex flex-col items-center gap-0.5 px-3 py-1.5 rounded-xl transition-all text-red-300"
+          title="تسجيل الخروج"
         >
           <span className="text-xl">🚪</span>
-          <span className="text-[10px]">خروج</span>
         </button>
       </nav>
     </>
