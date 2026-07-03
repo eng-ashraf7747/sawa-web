@@ -14,11 +14,11 @@ const navItems = [
     id: "overview",
     label: "لوحة التحكم",
     href: "/vendor/overview",
-    mobileIcon: "🏠",
+    mobileIcon: "📊",
     icon: (
       <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
-          d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
+          d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011-1v4a1 1 0 001 1m-6 0h6" />
       </svg>
     ),
     enabled: true,
@@ -184,9 +184,9 @@ export default function VendorLayout({ children, title }: VendorLayoutProps) {
               >
                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
-                    d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
+                    d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011-1v5m-4 0h4" />
                 </svg>
-                ملفي التجاري
+                الملف التجاري
               </Link>
               <Link
                 href="/legal/terms"
@@ -195,10 +195,21 @@ export default function VendorLayout({ children, title }: VendorLayoutProps) {
               >
                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
-                    d="M9 12h6m-6 0h12a6 6 0 016 0 6 6 0 016-6 6 6 0 01-6-6H6" />
+                    d="M9 12h6m-6 0h12a6 6 0 016 0 6 6 0 01-6-6H6" />
                 </svg>
                 شروط الاستخدام
               </Link>
+              <a
+                href="/contact"
+                onClick={() => setMenuOpen(false)}
+                className="w-full flex items-center gap-3 px-4 py-3 text-sm text-white/70 hover:bg-white/10 hover:text-white transition-colors"
+              >
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+                    d="M8 12h.01M12 21a9 9 0 10-9 9 0 011-9 9 0 009 9-9H9a9 9 0 01-9-9 9 0 019-9h4a9 9 0 009-9M12 3v9" />
+                </svg>
+                تواصل معنا
+              </a>
               <button
                 onClick={handleLogout}
                 disabled={loggingOut}
@@ -243,6 +254,20 @@ export default function VendorLayout({ children, title }: VendorLayoutProps) {
             )}
           </button>
         </div>
+
+        {/* ─── Contact Us (Desktop) ─── */}
+        <div className="px-3 py-3 border-t border-white/10">
+          <a
+            href="/contact"
+            className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-white/70 hover:bg-white/10 hover:text-white transition-all text-right cursor-pointer"
+          >
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+                d="M8 12h.01M12 21a9 9 0 10-9 9 0 011-9 9 0 009 9-9H9a9 9 0 01-9-9 9 0 019-9h4a9 9 0 009-9M12 3v9" />
+            </svg>
+            <span className="text-sm">تواصل معنا</span>
+          </a>
+        </div>
       </aside>
 
       <nav
@@ -270,12 +295,21 @@ export default function VendorLayout({ children, title }: VendorLayoutProps) {
           <span className="text-xl">🏪</span>
           <span className="text-[10px]">ملفي</span>
         </Link>
+        <Link
+          href="/contact"
+          className={`flex flex-col items-center gap-0.5 px-2 py-1.5 rounded-xl transition-all ${
+            pathname === "/contact" ? "text-[#c9a84c]" : "text-white/60"
+          }`}
+        >
+          <span className="text-xl">💬</span>
+          <span className="text-[10px]">تواصل</span>
+        </Link>
         <button
           onClick={handleLogout}
           className="flex flex-col items-center gap-0.5 px-2 py-1.5 rounded-xl transition-all text-red-300"
+          title="تسجيل الخروج"
         >
           <span className="text-xl">🚪</span>
-          <span className="text-[10px]">خروج</span>
         </button>
       </nav>
 
