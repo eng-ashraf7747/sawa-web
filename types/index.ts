@@ -84,3 +84,18 @@ export {
   MIN_OPERATIONS_FOR_RATING,
   BOOKING_CANCEL_HOURS,
 } from "./booking";
+export type {
+  ContactMessage,
+  CreateContactMessageInput,
+  ContactMessageMethod,
+  ContactMessageCategory,
+  ContactMessageStatus,
+  ContactMessageSenderType,
+  ContactMessageFilters,
+} from "./contact";
+export {
+  CONTACT_MESSAGE_CATEGORY_LABELS,
+  CONTACT_MESSAGE_METHOD_LABELS,
+  CONTACT_MESSAGE_STATUS_LABELS,
+  CONTACT_MESSAGE_SENDER_TYPE_LABELS,
+} from "./contact";
