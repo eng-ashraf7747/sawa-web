@@ -1,176 +1,121 @@
-// FILE: lib/contact.ts
+// C:\sawa-web\lib\contact.ts
 
-/**
- * Contact Service - Sawa Project
- * Handles user messages submission (Support Ticket System)
- * Fully platform-independent (works in web / mobile / tablet)
- */
-
+import {
+  collection,
+  addDoc,
+  getDocs,
+  query,
+  where,
+  orderBy,
+  Timestamp,
+  doc,
+  updateDoc,
+} from "firebase/firestore";
 import { db } from "@/lib/firebase";
-import { collection, addDoc, serverTimestamp } from "firebase/firestore";
+import { isValidEmail, isValidEgyptianPhone } from "@/lib/validations";
+import {
+  ContactMessage,
+  CreateContactMessageInput,
+  UpdateContactMessageInput,
+  ContactMessageFilters,
+} from "@/types/contact";
 
+const COLLECTION_NAME = "contact_messages";
 
-// ===============================
-// TYPES
-// ===============================
+// ─── تحويل مستند Firestore إلى ContactMessage ───────────────
+const toContactMessage = (id: string, data: Record<string, unknown>): ContactMessage => ({
+  id,
+  senderType: data.senderType as ContactMessage["senderType"],
+  senderId: (data.senderId as string) ?? null,
+  name: (data.name as string) ?? null,
+  city: (data.city as string) ?? null,
+  method: data.method as ContactMessage["method"],
+  contactValue: data.contactValue as string,
+  category: data.category as ContactMessage["category"],
+  message: data.message as string,
+  status: data.status as ContactMessage["status"],
+  adminNotes: (data.adminNotes as string) ?? null,
+  createdAt: (data.createdAt as Timestamp)?.toDate?.() ?? new Date(),
+  updatedAt: (data.updatedAt as Timestamp)?.toDate?.() ?? new Date(),
+});
 
-export type ContactCategory =
-  | "استفسار عام"
-  | "مشكلة تقنية في الموقع"
-  | "أرغب في التسجيل كمورد"
-  | "اقتراح فكرة جديدة"
-  | "شكوى"
-  | "أخرى";
+// ─── فحص صحة المُدخلات قبل الحفظ ─────────────────────────────
+const validateContactMessageInput = (input: CreateContactMessageInput): string => {
+  if (!input.contactValue.trim()) return "بيانات التواصل مطلوبة";
 
-export type ContactMethod = "email" | "whatsapp";
-
-export type SenderType = "عضو" | "زائر" | "مورد";
-
-
-// ===============================
-// INPUT MODEL
-// ===============================
-
-export interface ContactMessageInput {
-  userId?: string | null;
-
-  name: string;
-  email?: string | null;
-  phone?: string | null;
-  city: string;
-
-  category: ContactCategory;
-  message: string;
-
-  contactMethod: ContactMethod;
-}
-
-
-// ===============================
-// VALIDATION LAYER
-// ===============================
-
-/**
- * Validates contact form input before submission
- */
-function validateContactInput(data: ContactMessageInput): string | null {
-  if (!data.message || data.message.trim().length < 10) {
-    return "الرسالة يجب أن تكون 10 أحرف على الأقل";
+  if (input.method === "email" && !isValidEmail(input.contactValue)) {
+    return "بريد إلكتروني غير صالح";
   }
 
-  if (!data.name) {
-    return "الاسم مطلوب";
+  if (input.method === "whatsapp" && !isValidEgyptianPhone(input.contactValue)) {
+    return "رقم واتساب غير صالح";
   }
 
-  if (!data.city) {
+  if (!input.message.trim()) return "نص الرسالة مطلوب";
+
+  if (input.senderType === "guest" && !input.city) {
     return "المدينة مطلوبة";
   }
 
-  if (data.contactMethod === "email") {
-    if (!data.email) {
-      return "البريد الإلكتروني مطلوب";
-    }
-  }
+  return "";
+};
 
-  if (data.contactMethod === "whatsapp") {
-    if (!data.phone || data.phone.trim().length < 10) {
-      return "رقم الهاتف غير صحيح";
-    }
-  }
+// ─── إرسال رسالة جديدة ───────────────────────────────────────
+export const submitContactMessage = async (
+  input: CreateContactMessageInput
+): Promise<string> => {
+  const validationError = validateContactMessageInput(input);
+  if (validationError) throw new Error(validationError);
 
-  return null;
-}
-
-
-// ===============================
-// MAPPING LAYER
-// ===============================
-
-/**
- * Determines sender type based on authentication state
- */
-function mapSenderType(userId?: string | null): SenderType {
-  if (userId) return "عضو";
-  return "زائر";
-}
-
-
-// ===============================
-// DOCUMENT BUILDER
-// ===============================
-
-/**
- * Builds Firestore document structure
- */
-function buildContactDoc(data: ContactMessageInput) {
-  const senderType = mapSenderType(data.userId);
-
-  return {
-    userId: data.userId || null,
-    senderType,
-
-    name: data.name,
-    email: data.email || null,
-    phone: data.phone || null,
-    city: data.city,
-
-    category: data.category,
-    message: data.message,
-
-    contactMethod: data.contactMethod,
-    contactValue:
-      data.contactMethod === "email"
-        ? data.email
-        : data.phone,
-
-    status: "مفتوحة",
-
-    topicImportance: 0,
-    userImportance: 0,
-
+  const docRef = await addDoc(collection(db, COLLECTION_NAME), {
+    senderType: input.senderType,
+    senderId: input.senderId,
+    name: input.name,
+    city: input.city,
+    method: input.method,
+    contactValue: input.contactValue.trim(),
+    category: input.category,
+    message: input.message.trim(),
+    status: "new",
     adminNotes: null,
-    adminLog: null,
+    createdAt: Timestamp.now(),
+    updatedAt: Timestamp.now(),
+  });
 
-    createdAt: serverTimestamp(),
-    updatedAt: serverTimestamp(),
-  };
-}
+  return docRef.id;
+};
 
+// ─── جلب الرسائل للأدمن مع الفلاتر ───────────────────────────
+export const fetchContactMessages = async (
+  filters: ContactMessageFilters
+): Promise<ContactMessage[]> => {
+  const constraints = [];
 
-// ===============================
-// PUBLIC API
-// ===============================
+  if (filters.status) constraints.push(where("status", "==", filters.status));
+  if (filters.category) constraints.push(where("category", "==", filters.category));
+  if (filters.dateFrom) constraints.push(where("createdAt", ">=", Timestamp.fromDate(filters.dateFrom)));
+  if (filters.dateTo) constraints.push(where("createdAt", "<=", Timestamp.fromDate(filters.dateTo)));
 
-/**
- * Submit contact message to Firestore
- */
-export async function submitContactMessage(
-  data: ContactMessageInput
-): Promise<{ success: boolean; error?: string }> {
-  try {
-    // Validate input
-    const validationError = validateContactInput(data);
-    if (validationError) {
-      return {
-        success: false,
-        error: validationError,
-      };
-    }
+  const q = query(collection(db, COLLECTION_NAME), ...constraints, orderBy("createdAt", "desc"));
+  const snapshot = await getDocs(q);
 
-    // Build document
-    const doc = buildContactDoc(data);
+  return snapshot.docs.map((d) => toContactMessage(d.id, d.data()));
+};
 
-    // Save to Firestore
-    await addDoc(collection(db, "contact_messages"), doc);
+// ─── جلب عدد الرسائل الجديدة (لـ Badge الـ Sidebar) ──────────
+export const fetchNewContactMessagesCount = async (): Promise<number> => {
+  const q = query(collection(db, COLLECTION_NAME), where("status", "==", "new"));
+  const snapshot = await getDocs(q);
+  return snapshot.size;
+};
 
-    return { success: true };
-
-  } catch (error) {
-    console.error("CONTACT_SERVICE_ERROR:", error);
-
-    return {
-      success: false,
-      error: "حدث خطأ أثناء إرسال الرسالة",
-    };
-  }
-}
+// ─── تحديث حالة/ملاحظات رسالة (الأدمن فقط) ───────────────────
+export const updateContactMessage = async (
+  messageId: string,
+  input: UpdateContactMessageInput
+): Promise<void> => {
+  await updateDoc(doc(db, COLLECTION_NAME, messageId), {
+    ...input,
+    updatedAt: Timestamp.now(),
+  });
+};
