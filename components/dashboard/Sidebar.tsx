@@ -171,9 +171,7 @@ export default function Sidebar({
             <NavItem id="profile" label="بياناتي" isActive={activePage === "profile"} isChild onClick={() => onNavigate("profile")} />
             <NavItem id="points" label="سجل نقاطي" isActive={activePage === "points"} isChild onClick={() => onNavigate("points")} />
             
-           // <a href="/contact" className="... same style as before ...">💬 تواصل معنا</a>
-           // <a href="/legal/terms" className="... same style ...">📄 شروط الاستخدام</a>
-              
+           
               <NavItem 
   id="contact" 
   icon="💬" 
