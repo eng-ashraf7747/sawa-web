@@ -171,8 +171,21 @@ export default function Sidebar({
             <NavItem id="profile" label="بياناتي" isActive={activePage === "profile"} isChild onClick={() => onNavigate("profile")} />
             <NavItem id="points" label="سجل نقاطي" isActive={activePage === "points"} isChild onClick={() => onNavigate("points")} />
             
-            <a href="/contact" className="flex flex-col gap-0.5">💬 تواصل معنا</a>
-            <a href="/legal/terms" className="flex flex-col gap-0.5">📄 شروط الاستخدام</a>
+            
+                        <a 
+              href="/contact" 
+              className="w-full flex items-center gap-3 px-4 py-2.5 rounded-xl text-white/70 hover:bg-white/10 hover:text-white transition-all pr-10 py-2"
+            >
+              💬 تواصل معنا
+            </a>
+            
+            <a 
+              href="/legal/terms" 
+              className="w-full flex items-center gap-3 px-4 py-2.5 rounded-xl text-white/70 hover:bg-white/10 hover:text-white transition-all pr-10 py-2"
+            >
+              📄 شروط الاستخدام
+            </a>
+            
           </div>
         )}
       </nav>
