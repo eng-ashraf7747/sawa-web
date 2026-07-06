@@ -1,5 +1,7 @@
 // C:\sawa-web\components\shared\ContactForm.tsx
+
 "use client";
+
 import { useContactForm } from "@/hooks/useContactForm";
 import { CITIES } from "@/constants";
 import {
@@ -45,8 +47,11 @@ export default function ContactForm() {
     submit();
   };
 
-  const contactValueLabel = form.method === "whatsapp" ? "رقم الواتساب" : "البريد الإلكتروني";
-  const contactValuePlaceholder = form.method === "whatsapp" ? "01xxxxxxxxx" : "name@example.com";
+  const contactValueLabel =
+    form.method === "whatsapp" ? "رقم الواتساب" : "البريد الإلكتروني";
+
+  const contactValuePlaceholder =
+    form.method === "whatsapp" ? "01xxxxxxxxx" : "name@example.com";
 
   return (
     <div className="px-4 md:px-6 lg:px-8 py-10 flex justify-center" dir="rtl">
@@ -75,7 +80,11 @@ export default function ContactForm() {
                 disabled={!isNameEditable}
                 placeholder="اكتب اسمك"
                 className={`flex-1 rounded-xl border px-3.5 py-2.5 text-sm outline-none transition
-                  ${isNameEditable ? "border-gray-200 focus:border-[#1a3c6e]" : "border-gray-100 bg-gray-50 text-gray-500"}`}
+                  ${
+                    isNameEditable
+                      ? "border-gray-200 focus:border-[#1a3c6e]"
+                      : "border-gray-100 bg-gray-50 text-gray-500"
+                  }`}
               />
               {vendorBadge && (
                 <span className="flex-shrink-0 bg-[#c9a84c] text-white text-xs font-bold px-2.5 py-1 rounded-full">
@@ -85,28 +94,35 @@ export default function ContactForm() {
             </div>
           </div>
 
-          {/* المدينة */}
-          {showCityField && (
-            <div>
-              <label className="block text-xs font-semibold text-gray-500 mb-1.5">المدينة</label>
-              <select
-                value={form.city}
-                onChange={(e) => updateField("city", e.target.value)}
-                className="w-full rounded-xl border border-gray-200 px-3.5 py-2.5 text-sm outline-none focus:border-[#1a3c6e] bg-white"
-              >
-                <option value="">اختر المدينة</option>
-                {CITIES.map((city) => (
-                  <option key={city.id} value={city.id}>
-                    {city.nameAr}
-                  </option>
-                ))}
-              </select>
-            </div>
-          )}
+          {/* المدينة — للزائر فقط، بانتقال Fade */}
+          <div
+            className={`transition-all duration-300 overflow-hidden ${
+              showCityField ? "max-h-24 opacity-100" : "max-h-0 opacity-0"
+            }`}
+          >
+            <label className="block text-xs font-semibold text-gray-500 mb-1.5">
+              المدينة
+            </label>
+            <select
+              value={form.city}
+              onChange={(e) => updateField("city", e.target.value)}
+              required={showCityField}
+              className="w-full rounded-xl border border-gray-200 px-3.5 py-2.5 text-sm outline-none focus:border-[#1a3c6e] bg-white"
+            >
+              <option value="">اختر المدينة</option>
+              {CITIES.map((city) => (
+                <option key={city.id} value={city.id}>
+                  {city.nameAr}
+                </option>
+              ))}
+            </select>
+          </div>
 
           {/* وسيلة التواصل */}
           <div>
-            <label className="block text-xs font-semibold text-gray-500 mb-1.5">وسيلة التواصل</label>
+            <label className="block text-xs font-semibold text-gray-500 mb-1.5">
+              وسيلة التواصل
+            </label>
             <div className="flex gap-2 mb-3">
               {methodEntries.map(([value, label]) => (
                 <button
@@ -114,14 +130,18 @@ export default function ContactForm() {
                   type="button"
                   onClick={() => setMethod(value)}
                   className={`flex-1 rounded-xl py-2.5 text-sm font-semibold transition
-                    ${form.method === value ? "bg-[#1a3c6e] text-white" : "border border-gray-200 text-gray-500 hover:bg-gray-50"}`}
+                    ${
+                      form.method === value
+                        ? "bg-[#1a3c6e] text-white"
+                        : "border border-gray-200 text-gray-500 hover:bg-gray-50"
+                    }`}
                 >
                   {label}
                 </button>
               ))}
             </div>
 
-            <div key={form.method}>
+            <div className="transition-opacity duration-300" key={form.method}>
               <label className="block text-xs font-semibold text-gray-500 mb-1.5">
                 {contactValueLabel}
               </label>
@@ -131,18 +151,27 @@ export default function ContactForm() {
                 onChange={(e) => updateField("contactValue", e.target.value)}
                 disabled={!isContactValueEditable}
                 placeholder={contactValuePlaceholder}
+                required
                 className={`w-full rounded-xl border px-3.5 py-2.5 text-sm outline-none transition
-                  ${isContactValueEditable ? "border-gray-200 focus:border-[#1a3c6e]" : "border-gray-100 bg-gray-50 text-gray-500"}`}
+                  ${
+                    isContactValueEditable
+                      ? "border-gray-200 focus:border-[#1a3c6e]"
+                      : "border-gray-100 bg-gray-50 text-gray-500"
+                  }`}
               />
             </div>
           </div>
 
           {/* نوع الرسالة */}
           <div>
-            <label className="block text-xs font-semibold text-gray-500 mb-1.5">نوع الرسالة</label>
+            <label className="block text-xs font-semibold text-gray-500 mb-1.5">
+              نوع الرسالة
+            </label>
             <select
               value={form.category}
-              onChange={(e) => updateField("category", e.target.value as ContactMessageCategory)}
+              onChange={(e) =>
+                updateField("category", e.target.value as ContactMessageCategory)
+              }
               className="w-full rounded-xl border border-gray-200 px-3.5 py-2.5 text-sm outline-none focus:border-[#1a3c6e] bg-white"
             >
               {categoryEntries.map(([value, label]) => (
@@ -155,11 +184,14 @@ export default function ContactForm() {
 
           {/* الرسالة */}
           <div>
-            <label className="block text-xs font-semibold text-gray-500 mb-1.5">رسالتك</label>
+            <label className="block text-xs font-semibold text-gray-500 mb-1.5">
+              رسالتك
+            </label>
             <textarea
               value={form.message}
               onChange={(e) => updateField("message", e.target.value)}
               placeholder="اكتب رسالتك هنا"
+              required
               rows={4}
               maxLength={1000}
               className="w-full rounded-xl border border-gray-200 px-3.5 py-2.5 text-sm outline-none focus:border-[#1a3c6e] resize-none"
@@ -167,7 +199,9 @@ export default function ContactForm() {
           </div>
 
           {error && (
-            <p className="text-xs text-red-500 bg-red-50 rounded-xl px-3.5 py-2.5">{error}</p>
+            <p className="text-xs text-red-500 bg-red-50 rounded-xl px-3.5 py-2.5">
+              {error}
+            </p>
           )}
 
           <div className="flex gap-2.5 mt-1">
@@ -190,38 +224,48 @@ export default function ContactForm() {
         </form>
       </div>
 
-      {/* Success Modal */}
+      {/* Modal نجاح الإرسال */}
       {modal === "success" && (
         <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 px-4">
           <div className="bg-white rounded-2xl p-6 w-full max-w-xs text-center">
             <p className="text-base font-bold text-[#1a3c6e] mb-1">تم إرسال رسالتك بنجاح ✓</p>
-            <p className="text-sm text-gray-500 mb-6">شكراً لتواصلك معنا</p>
-            <button
-              onClick={goHome}
-              className="w-full bg-[#1a3c6e] text-white font-semibold rounded-xl py-3 text-sm"
-            >
-              العودة للصفحة الرئيسية
-            </button>
+            <p className="text-xs text-gray-400 mb-5">هل تريد العودة للرئيسية؟</p>
+            <div className="flex gap-2.5">
+              <button
+                onClick={goHome}
+                className="flex-1 bg-[#1a3c6e] text-white font-semibold rounded-xl py-2.5 text-sm"
+              >
+                نعم
+              </button>
+              <button
+                onClick={dismissCancelConfirm}
+                className="flex-1 border border-gray-200 text-gray-500 font-semibold rounded-xl py-2.5 text-sm"
+              >
+                إغلاق
+              </button>
+            </div>
           </div>
         </div>
       )}
 
-      {/* Cancel Confirm Modal */}
+      {/* Modal تأكيد الإلغاء */}
       {modal === "cancelConfirm" && (
         <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 px-4">
           <div className="bg-white rounded-2xl p-6 w-full max-w-xs text-center">
             <p className="text-base font-bold text-[#1a3c6e] mb-1">إلغاء الرسالة؟</p>
-            <p className="text-xs text-gray-500 mb-5">هل أنت متأكد؟ سيتم فقدان البيانات المدخلة.</p>
-            <div className="flex gap-3">
+            <p className="text-xs text-gray-400 mb-5">
+              هل أنت متأكد؟ سيتم فقدان البيانات المدخلة.
+            </p>
+            <div className="flex gap-2.5">
               <button
                 onClick={confirmCancel}
-                className="flex-1 bg-red-600 text-white font-semibold rounded-xl py-3 text-sm"
+                className="flex-1 bg-red-600 hover:bg-red-700 text-white font-semibold rounded-xl py-2.5 text-sm transition"
               >
                 نعم، إلغاء
               </button>
               <button
                 onClick={dismissCancelConfirm}
-                className="flex-1 border border-gray-200 text-gray-600 font-semibold rounded-xl py-3 text-sm"
+                className="flex-1 border border-gray-200 text-gray-500 font-semibold rounded-xl py-2.5 text-sm"
               >
                 الاستمرار في الكتابة
               </button>
