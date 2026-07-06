@@ -1,5 +1,4 @@
 // C:\sawa-web\lib\contact.ts
-
 import {
   collection,
   addDoc,
@@ -10,8 +9,13 @@ import {
   Timestamp,
   doc,
   updateDoc,
+  writeBatch,
+  limit,
+  startAfter,
+  DocumentSnapshot,
 } from "firebase/firestore";
 import { db } from "@/lib/firebase";
+import { getAuth } from "firebase/auth";
 import { validateContactMessageInput } from "@/lib/contactValidation";
 import {
   ContactMessage,
@@ -22,22 +26,30 @@ import {
 
 const COLLECTION_NAME = "contact_messages";
 
-// ─── تحويل مستند Firestore إلى ContactMessage ───────────────
-const toContactMessage = (id: string, data: Record<string, unknown>): ContactMessage => ({
-  id,
-  senderType: data.senderType as ContactMessage["senderType"],
-  senderId: (data.senderId as string) ?? null,
-  name: (data.name as string) ?? null,
-  city: (data.city as string) ?? null,
-  method: data.method as ContactMessage["method"],
-  contactValue: data.contactValue as string,
-  category: data.category as ContactMessage["category"],
-  message: data.message as string,
-  status: data.status as ContactMessage["status"],
-  adminNotes: (data.adminNotes as string) ?? null,
-  createdAt: (data.createdAt as Timestamp)?.toDate?.() ?? new Date(),
-  updatedAt: (data.updatedAt as Timestamp)?.toDate?.() ?? new Date(),
-});
+const toContactMessage = (id: string, data: Record<string, unknown>): ContactMessage => {
+  const baseData = {
+    senderType: (data.senderType as ContactMessage["senderType"]) ?? "guest",
+    senderId: (data.senderId as string) ?? null,
+    name: (data.name as string) ?? null,
+    city: (data.city as string) ?? null,
+    method: (data.method as ContactMessage["method"]) ?? "whatsapp",
+    contactValue: (data.contactValue as string) ?? "",
+    category: (data.category as ContactMessage["category"]) ?? "general_inquiry",
+    message: (data.message as string) ?? "",
+    status: (data.status as ContactMessage["status"]) ?? "new",
+    adminNotes: (data.adminNotes as string) ?? null,
+    createdAt: (data.createdAt as Timestamp)?.toDate?.() ?? new Date(),
+    updatedAt: (data.updatedAt as Timestamp)?.toDate?.() ?? new Date(),
+  };
+  return { ...baseData, id, uid: id } as ContactMessage;  // إصلاح: أضف id
+};
+
+// Helper
+const requireAdmin = async (): Promise<void> => {
+  const auth = getAuth();
+  const user = auth.currentUser;
+  if (!user) throw new Error("غير مصرح");
+};
 
 // ─── إرسال رسالة جديدة ───────────────────────────────────────
 export const submitContactMessage = async (
@@ -60,41 +72,85 @@ export const submitContactMessage = async (
     createdAt: Timestamp.now(),
     updatedAt: Timestamp.now(),
   });
-
   return docRef.id;
 };
 
-// ─── جلب الرسائل للأدمن مع الفلاتر ───────────────────────────
+// ─── جلب الرسائل ───────────────────────────
 export const fetchContactMessages = async (
-  filters: ContactMessageFilters
-): Promise<ContactMessage[]> => {
-  const constraints = [];
+  filters: ContactMessageFilters & { lastDoc?: DocumentSnapshot; pageSize?: number }
+): Promise<{ messages: ContactMessage[]; lastDoc: any }> => {
+  await requireAdmin();
 
-  if (filters.status) constraints.push(where("status", "==", filters.status));
-  if (filters.category) constraints.push(where("category", "==", filters.category));
-  if (filters.dateFrom) constraints.push(where("createdAt", ">=", Timestamp.fromDate(filters.dateFrom)));
-  if (filters.dateTo) constraints.push(where("createdAt", "<=", Timestamp.fromDate(filters.dateTo)));
+  try {
+    const constraints: any[] = [];
+    if (filters.status && filters.status !== "all" as any) {
+      constraints.push(where("status", "==", filters.status));
+    }
+    if (filters.category && filters.category !== "all" as any) {
+      constraints.push(where("category", "==", filters.category));
+    }
+    if (filters.senderType && filters.senderType !== "all" as any) {
+      constraints.push(where("senderType", "==", filters.senderType));
+    }
+    if (filters.dateFrom) {
+      constraints.push(where("createdAt", ">=", Timestamp.fromDate(filters.dateFrom)));
+    }
+    if (filters.dateTo) {
+      constraints.push(where("createdAt", "<=", Timestamp.fromDate(filters.dateTo)));
+    }
 
-  const q = query(collection(db, COLLECTION_NAME), ...constraints, orderBy("createdAt", "desc"));
-  const snapshot = await getDocs(q);
+    const pageSize = filters.pageSize || 50;
+    const q = query(
+      collection(db, COLLECTION_NAME),
+      ...constraints,
+      orderBy("createdAt", "desc"),
+      limit(pageSize),
+      ...(filters.lastDoc ? [startAfter(filters.lastDoc)] : [])
+    );
 
-  return snapshot.docs.map((d) => toContactMessage(d.id, d.data()));
+    const snapshot = await getDocs(q);
+    const messages = snapshot.docs.map((d) => toContactMessage(d.id, d.data()));
+    const lastDoc = snapshot.docs[snapshot.docs.length - 1];
+
+    return { messages, lastDoc };
+  } catch (error) {
+    console.error("Firestore Fetch Error:", error);
+    throw error;
+  }
 };
 
-// ─── جلب عدد الرسائل الجديدة (لـ Badge الـ Sidebar) ──────────
+// ─── جلب عدد الرسائل الجديدة ────
 export const fetchNewContactMessagesCount = async (): Promise<number> => {
+  await requireAdmin();
   const q = query(collection(db, COLLECTION_NAME), where("status", "==", "new"));
   const snapshot = await getDocs(q);
   return snapshot.size;
 };
 
-// ─── تحديث حالة/ملاحظات رسالة (الأدمن فقط) ───────────────────
+// ─── تحديث ───────────────────
 export const updateContactMessage = async (
   messageId: string,
   input: UpdateContactMessageInput
 ): Promise<void> => {
+  await requireAdmin();
+  if (!messageId) throw new Error("معرف الرسالة مطلوب");
+
   await updateDoc(doc(db, COLLECTION_NAME, messageId), {
     ...input,
     updatedAt: Timestamp.now(),
   });
+};
+
+// ─── حذف جماعي ───────────
+export const deleteContactMessagesBatch = async (
+  messageIds: string[]
+): Promise<void> => {
+  await requireAdmin();
+  if (!messageIds?.length) return;
+
+  const batch = writeBatch(db);
+  messageIds.forEach((id) => {
+    batch.delete(doc(db, COLLECTION_NAME, id));
+  });
+  await batch.commit();
 };
