@@ -1,303 +1,159 @@
 // C:\sawa-web\components\admin\ContactMessagesFilters.tsx
 "use client";
-
-import { useCallback, useMemo, useState } from "react"; // ✅ أضفنا useState هنا
-import {
-  ContactMessageFilters,
-  ContactMessageStatus,
-  ContactMessageCategory,
-  CONTACT_MESSAGE_STATUS_LABELS,
-  CONTACT_MESSAGE_CATEGORY_LABELS,
-} from "@/types/contact";
+import { ContactMessageFilters } from "@/types/contact";
 
 interface ContactMessagesFiltersProps {
   filters: ContactMessageFilters;
   onChange: (filters: ContactMessageFilters) => void;
-  className?: string;
-}
-
-// استخدام null بدلاً من undefined لتوافق مع الـ types
-const DEFAULT_FILTERS: ContactMessageFilters = {
-  status: null,
-  category: null,
-  dateFrom: null,
-  dateTo: null,
-};
-
-const statusEntries = Object.entries(CONTACT_MESSAGE_STATUS_LABELS) as [
-  ContactMessageStatus,
-  string
-][];
-
-const categoryEntries = Object.entries(CONTACT_MESSAGE_CATEGORY_LABELS) as [
-  ContactMessageCategory,
-  string
-][];
-
-// دوال مساعدة للتواريخ - ترجع null بدلاً من undefined
-const toDateInputValue = (date: Date | null | undefined): string => {
-  if (!date || !(date instanceof Date) || isNaN(date.getTime())) return "";
-  
-  try {
-    const year = date.getFullYear();
-    const month = String(date.getMonth() + 1).padStart(2, "0");
-    const day = String(date.getDate()).padStart(2, "0");
-    return `${year}-${month}-${day}`;
-  } catch {
-    return "";
-  }
-};
-
-const parseStartOfDay = (value: string): Date | null => {
-  if (!value) return null;
-  
-  try {
-    const date = new Date(`${value}T00:00:00`);
-    return isNaN(date.getTime()) ? null : date;
-  } catch {
-    return null;
-  }
-};
-
-const parseEndOfDay = (value: string): Date | null => {
-  if (!value) return null;
-  
-  try {
-    const date = new Date(`${value}T23:59:59.999`);
-    return isNaN(date.getTime()) ? null : date;
-  } catch {
-    return null;
-  }
-};
-
-// Custom Hook للفلاتر - استخدام null
-export function useContactMessagesFilters(
-  initialFilters?: Partial<ContactMessageFilters>
-) {
-  const [filters, setFilters] = useState<ContactMessageFilters>({
-    ...DEFAULT_FILTERS,
-    ...initialFilters,
-  });
-
-  const updateFilter = useCallback(<K extends keyof ContactMessageFilters>(
-    key: K,
-    value: ContactMessageFilters[K]
-  ) => {
-    setFilters((prev: ContactMessageFilters) => ({ // ✅ أضفنا النوع هنا
-      ...prev,
-      [key]: value,
-    }));
-  }, []);
-
-  const resetFilters = useCallback(() => {
-    setFilters(DEFAULT_FILTERS);
-  }, []);
-
-  const isFilterActive = useMemo(() => {
-    return Object.values(filters).some(
-      (value) => value !== null && value !== undefined && value !== ""
-    );
-  }, [filters]);
-
-  return {
-    filters,
-    setFilters,
-    updateFilter,
-    resetFilters,
-    isFilterActive,
-  };
+  loading?: boolean;
 }
 
 export default function ContactMessagesFilters({
   filters,
   onChange,
-  className = "",
+  loading = false,
 }: ContactMessagesFiltersProps) {
-  // معالجات الأحداث - استخدام null بدلاً من undefined
-  const handleStatusChange = useCallback(
-    (e: React.ChangeEvent<HTMLSelectElement>) => {
-      const value = e.target.value || null;
-      onChange({
-        ...filters,
-        status: value as ContactMessageStatus | null,
-      });
-    },
-    [filters, onChange]
-  );
+  const handleSelectChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    const { name, value } = e.target;
+    onChange({
+      ...filters,
+      [name]: value === "all" ? null : value,
+    });
+  };
 
-  const handleCategoryChange = useCallback(
-    (e: React.ChangeEvent<HTMLSelectElement>) => {
-      const value = e.target.value || null;
-      onChange({
-        ...filters,
-        category: value as ContactMessageCategory | null,
-      });
-    },
-    [filters, onChange]
-  );
+  const handleDateChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const { name, value } = e.target;
+    onChange({
+      ...filters,
+      [name]: value ? new Date(value) : null,
+    });
+  };
 
-  const handleDateFromChange = useCallback(
-    (e: React.ChangeEvent<HTMLInputElement>) => {
-      onChange({
-        ...filters,
-        dateFrom: parseStartOfDay(e.target.value),
-      });
-    },
-    [filters, onChange]
-  );
+  const formatDateForInput = (date: Date | null | undefined): string => {
+    if (!date) return "";
+    return date.toISOString().split("T")[0];
+  };
 
-  const handleDateToChange = useCallback(
-    (e: React.ChangeEvent<HTMLInputElement>) => {
-      onChange({
-        ...filters,
-        dateTo: parseEndOfDay(e.target.value),
-      });
-    },
-    [filters, onChange]
-  );
-
-  const handleReset = useCallback(() => {
-    onChange(DEFAULT_FILTERS);
-  }, [onChange]);
-
-  // التحقق من وجود فلاتر نشطة - التحقق من null
-  const isFilterActive = useMemo(() => {
-    return Object.values(filters).some(
-      (value) => value !== null && value !== undefined && value !== ""
-    );
-  }, [filters]);
+  const resetFilters = () => {
+    onChange({
+      status: null,
+      category: null,
+      senderType: null,
+      dateFrom: null,
+      dateTo: null,
+    });
+  };
 
   return (
     <div
-      className={`bg-white rounded-xl border border-slate-100 p-3 sm:p-4 mb-6 ${className}`}
       dir="rtl"
-      role="search"
-      aria-label="فلاتر رسائل التواصل"
+      className="bg-white p-4 rounded-xl border border-gray-100 shadow-sm grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4 items-end px-4 md:px-6 lg:px-8"
     >
-      {/* شبكة متجاوبة */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-3 items-end">
-        
-        {/* الحالة */}
-        <div className="sm:col-span-2 lg:col-span-1">
-          <label htmlFor="status-filter" className="block text-xs text-slate-500 mb-1">
-            الحالة
-          </label>
-          <select
-            id="status-filter"
-            value={filters.status ?? ""}
-            onChange={handleStatusChange}
-            className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#1a3c6e]/50 bg-white transition-colors"
-          >
-            <option value="">كل الحالات</option>
-            {statusEntries.map(([value, label]) => (
-              <option key={value} value={value}>
-                {label}
-              </option>
-            ))}
-          </select>
-        </div>
-
-        {/* التصنيف */}
-        <div className="sm:col-span-2 lg:col-span-1">
-          <label htmlFor="category-filter" className="block text-xs text-slate-500 mb-1">
-            التصنيف
-          </label>
-          <select
-            id="category-filter"
-            value={filters.category ?? ""}
-            onChange={handleCategoryChange}
-            className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#1a3c6e]/50 bg-white transition-colors"
-          >
-            <option value="">كل التصنيفات</option>
-            {categoryEntries.map(([value, label]) => (
-              <option key={value} value={value}>
-                {label}
-              </option>
-            ))}
-          </select>
-        </div>
-
-        {/* مجموعة التواريخ */}
-        <div className="sm:col-span-2 lg:col-span-2 grid grid-cols-2 gap-2">
-          <div>
-            <label htmlFor="date-from-filter" className="block text-xs text-slate-500 mb-1">
-              من
-            </label>
-            <input
-              id="date-from-filter"
-              type="date"
-              value={toDateInputValue(filters.dateFrom)}
-              onChange={handleDateFromChange}
-              className="w-full border border-slate-200 rounded-lg px-2.5 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#1a3c6e]/50 [direction:ltr] transition-colors"
-              aria-label="تاريخ البداية"
-              max={filters.dateTo ? toDateInputValue(filters.dateTo) : undefined}
-            />
-          </div>
-
-          <div>
-            <label htmlFor="date-to-filter" className="block text-xs text-slate-500 mb-1">
-              إلى
-            </label>
-            <input
-              id="date-to-filter"
-              type="date"
-              value={toDateInputValue(filters.dateTo)}
-              onChange={handleDateToChange}
-              className="w-full border border-slate-200 rounded-lg px-2.5 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#1a3c6e]/50 [direction:ltr] transition-colors"
-              aria-label="تاريخ النهاية"
-              min={filters.dateFrom ? toDateInputValue(filters.dateFrom) : undefined}
-            />
-          </div>
-        </div>
-
-        {/* زر إعادة الضبط */}
-        <div className="sm:col-span-2 lg:col-span-1 flex items-end">
-          <button
-            type="button"
-            onClick={handleReset}
-            disabled={!isFilterActive}
-            className={`w-full sm:w-auto text-xs font-semibold px-4 py-2 rounded-lg transition
-              ${
-                isFilterActive
-                  ? "text-[#c9a84c] hover:text-[#b8973b] hover:bg-[#c9a84c]/10"
-                  : "text-slate-300 cursor-not-allowed"
-              }
-            `}
-            aria-label="إعادة ضبط الفلاتر"
-          >
-            إعادة ضبط
-          </button>
-        </div>
+      {/* حالة الرسالة */}
+      <div className="flex flex-col gap-1.5 w-full">
+        <label htmlFor="status" className="text-xs font-medium text-gray-500 font-sans">
+          حالة الرسالة
+        </label>
+        <select
+          id="status"
+          name="status"
+          value={filters.status ?? "all"}
+          onChange={handleSelectChange}
+          disabled={loading}
+          className="w-full bg-gray-50 border border-gray-200 rounded-lg px-3 py-2 text-sm text-gray-700 focus:outline-none focus:border-emerald-500 transition-colors disabled:opacity-70"
+        >
+          <option value="all">كل الحالات</option>
+          <option value="new">جديد</option>
+          <option value="in_progress">قيد المعالجة</option>
+          <option value="resolved">تم الحل</option>
+        </select>
       </div>
 
-      {/* ملخص الفلاتر النشطة */}
-      {isFilterActive && (
-        <div className="mt-3 pt-3 border-t border-slate-100 flex flex-wrap gap-2 text-xs text-slate-500">
-          <span className="font-medium">الفلاتر النشطة:</span>
-          <div className="flex flex-wrap gap-2">
-            {filters.status && (
-              <span className="bg-slate-50 px-2 py-1 rounded-md whitespace-nowrap">
-                {CONTACT_MESSAGE_STATUS_LABELS[filters.status]}
-              </span>
-            )}
-            {filters.category && (
-              <span className="bg-slate-50 px-2 py-1 rounded-md whitespace-nowrap">
-                {CONTACT_MESSAGE_CATEGORY_LABELS[filters.category]}
-              </span>
-            )}
-            {filters.dateFrom && (
-              <span className="bg-slate-50 px-2 py-1 rounded-md whitespace-nowrap">
-                من: {toDateInputValue(filters.dateFrom)}
-              </span>
-            )}
-            {filters.dateTo && (
-              <span className="bg-slate-50 px-2 py-1 rounded-md whitespace-nowrap">
-                إلى: {toDateInputValue(filters.dateTo)}
-              </span>
-            )}
-          </div>
-        </div>
-      )}
+      {/* تصنيف المحتوى */}
+      <div className="flex flex-col gap-1.5 w-full">
+        <label htmlFor="category" className="text-xs font-medium text-gray-500">
+          تصنيف المحتوى
+        </label>
+        <select
+          id="category"
+          name="category"
+          value={filters.category ?? "all"}
+          onChange={handleSelectChange}
+          disabled={loading}
+          className="w-full bg-gray-50 border border-gray-200 rounded-lg px-3 py-2 text-sm text-gray-700 focus:outline-none focus:border-emerald-500 transition-colors disabled:opacity-70"
+        >
+          <option value="all">كل التصنيفات</option>
+          <option value="general_inquiry">استفسار عام</option>
+          <option value="technical_issue">مشكلة تقنية</option>
+          <option value="vendor_request">طلب انضمام كمورد</option>
+          <option value="complaint">شكوى أو بلاغ</option>
+          <option value="suggestion">اقتراح لتطوير المنصة</option>
+          <option value="other">أخرى</option>
+        </select>
+      </div>
+
+      {/* نوع المرسل */}
+      <div className="flex flex-col gap-1.5 w-full">
+        <label htmlFor="senderType" className="text-xs font-medium text-gray-500">
+          نوع المرسل
+        </label>
+        <select
+          id="senderType"
+          name="senderType"
+          value={filters.senderType ?? "all"}
+          onChange={handleSelectChange}
+          disabled={loading}
+          className="w-full bg-gray-50 border border-gray-200 rounded-lg px-3 py-2 text-sm text-gray-700 focus:outline-none focus:border-emerald-500 transition-colors disabled:opacity-70"
+        >
+          <option value="all">كل الأنواع</option>
+          <option value="guest">زائر (غير مسجل)</option>
+          <option value="user">مستخدم (عميل)</option>
+          <option value="vendor">مورد (صاحب عرض)</option>
+        </select>
+      </div>
+
+      {/* من تاريخ */}
+      <div className="flex flex-col gap-1.5 w-full">
+        <label htmlFor="dateFrom" className="text-xs font-medium text-gray-500">
+          من تاريخ
+        </label>
+        <input
+          id="dateFrom"
+          name="dateFrom"
+          type="date"
+          value={formatDateForInput(filters.dateFrom)}
+          onChange={handleDateChange}
+          disabled={loading}
+          className="w-full bg-gray-50 border border-gray-200 rounded-lg px-3 py-2 text-sm text-gray-700 focus:outline-none focus:border-emerald-500 transition-colors disabled:opacity-70"
+        />
+      </div>
+
+      {/* إلى تاريخ */}
+      <div className="flex flex-col gap-1.5 w-full">
+        <label htmlFor="dateTo" className="text-xs font-medium text-gray-500">
+          إلى تاريخ
+        </label>
+        <input
+          id="dateTo"
+          name="dateTo"
+          type="date"
+          value={formatDateForInput(filters.dateTo)}
+          onChange={handleDateChange}
+          disabled={loading}
+          className="w-full bg-gray-50 border border-gray-200 rounded-lg px-3 py-2 text-sm text-gray-700 focus:outline-none focus:border-emerald-500 transition-colors disabled:opacity-70"
+        />
+      </div>
+
+      {/* زر مسح الفلاتر */}
+      <div className="flex flex-col gap-1.5 w-full lg:col-span-1">
+        <button
+          onClick={resetFilters}
+          disabled={loading}
+          className="mt-auto px-4 py-2 text-sm text-red-600 hover:bg-red-50 border border-red-200 rounded-lg transition-colors disabled:opacity-70"
+        >
+          مسح الفلاتر
+        </button>
+      </div>
     </div>
   );
 }
