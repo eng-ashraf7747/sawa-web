@@ -15,7 +15,7 @@ import {
   DocumentSnapshot,
 } from "firebase/firestore";
 import { db } from "@/lib/firebase";
-import { getAuth } from "firebase/auth";
+import { getAuth, onAuthStateChanged } from "firebase/auth";
 import { validateContactMessageInput } from "@/lib/contactValidation";
 import {
   ContactMessage,
@@ -41,14 +41,30 @@ const toContactMessage = (id: string, data: Record<string, unknown>): ContactMes
     createdAt: (data.createdAt as Timestamp)?.toDate?.() ?? new Date(),
     updatedAt: (data.updatedAt as Timestamp)?.toDate?.() ?? new Date(),
   };
-  return { ...baseData, id, uid: id } as ContactMessage;  // إصلاح: أضف id
+  return { ...baseData, id, uid: id } as ContactMessage;
 };
 
-// Helper
-const requireAdmin = async (): Promise<void> => {
-  const auth = getAuth();
-  const user = auth.currentUser;
-  if (!user) throw new Error("غير مصرح");
+// التصحيح الجذري: دالة ذكية تنتظر تحميل جلسة المستخدم من Firebase Auth قبل إطلاق الاستعلام
+const requireAdmin = (): Promise<void> => {
+  return new Promise((resolve, reject) => {
+    const auth = getAuth();
+    
+    // إذا كان المستخدم محمل وموجود فعلياً، نمرر الطلب فوراً
+    if (auth.currentUser) {
+      resolve();
+      return;
+    }
+
+    // إذا لم يكن محملاً (مثال عند عمل Refresh)، ننتظر أول تغيير لحالة الـ Auth
+    const unsubscribe = onAuthStateChanged(auth, (user) => {
+      unsubscribe();
+      if (user) {
+        resolve();
+      } else {
+        reject(new Error("غير مصرح"));
+      }
+    });
+  });
 };
 
 // ─── إرسال رسالة جديدة ───────────────────────────────────────
