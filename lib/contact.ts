@@ -12,7 +12,7 @@ import {
   updateDoc,
 } from "firebase/firestore";
 import { db } from "@/lib/firebase";
-import { isValidEmail, isValidEgyptianPhone } from "@/lib/validations";
+import { validateContactMessageInput } from "@/lib/contactValidation";
 import {
   ContactMessage,
   CreateContactMessageInput,
@@ -38,27 +38,6 @@ const toContactMessage = (id: string, data: Record<string, unknown>): ContactMes
   createdAt: (data.createdAt as Timestamp)?.toDate?.() ?? new Date(),
   updatedAt: (data.updatedAt as Timestamp)?.toDate?.() ?? new Date(),
 });
-
-// ─── فحص صحة المُدخلات قبل الحفظ ─────────────────────────────
-const validateContactMessageInput = (input: CreateContactMessageInput): string => {
-  if (!input.contactValue.trim()) return "بيانات التواصل مطلوبة";
-
-  if (input.method === "email" && !isValidEmail(input.contactValue)) {
-    return "بريد إلكتروني غير صالح";
-  }
-
-  if (input.method === "whatsapp" && !isValidEgyptianPhone(input.contactValue)) {
-    return "رقم واتساب غير صالح";
-  }
-
-  if (!input.message.trim()) return "نص الرسالة مطلوب";
-
-  if (input.senderType === "guest" && !input.city) {
-    return "المدينة مطلوبة";
-  }
-
-  return "";
-};
 
 // ─── إرسال رسالة جديدة ───────────────────────────────────────
 export const submitContactMessage = async (
