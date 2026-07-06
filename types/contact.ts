@@ -55,9 +55,10 @@ export type UpdateContactMessageInput = {
 
 // ─── فلاتر شاشة الأدمن ──────────────────────────────────────
 export interface ContactMessageFilters {
-  status: ContactMessageStatus | null;
-  category: ContactMessageCategory | null;
-  dateFrom: Date | null;
+  status?: ContactMessageStatus | null;
+  category?: ContactMessageCategory | null;
+  senderType?: ContactMessageSenderType | null;
+  dateFrom?: Date | null;
   dateTo: Date | null;
 }
 
