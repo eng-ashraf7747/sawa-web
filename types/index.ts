@@ -57,6 +57,12 @@ export interface Service {
   available: boolean;
 }
 
+export interface NavLink {
+  labelAr: string;
+  href: string;
+  badgeAr?: string;
+}
+
 export type AuthMode = "login" | "register" | "forgotPassword";
 
 export type { Deal, CreateDealInput, UpdateDealInput } from "./deal";

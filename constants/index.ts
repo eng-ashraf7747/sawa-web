@@ -1,4 +1,5 @@
-import { City, Service } from "@/types";
+// C:\sawa-web\constants\index.ts
+import { City, Service, NavLink } from "@/types";
 
 export const CITIES: City[] = [
   { id: "fayoum", name: "Fayoum", nameAr: "الفيوم", available: true },
@@ -25,3 +26,10 @@ export const TIERS = {
   gold: { min: 600, max: 999, nameAr: "ذهبية" },
   diamond: { min: 1000, max: Infinity, nameAr: "ماسية" },
 };
+
+export const NAV_LINKS: NavLink[] = [
+  { labelAr: "كيف تعمل؟", href: "/how-it-works", badgeAr: "قريباً" },
+  { labelAr: "العضوية", href: "/membership" },
+  { labelAr: "لأصحاب الأعمال", href: "/for-business" },
+  { labelAr: "تواصل معنا", href: "/contact" },
+];
