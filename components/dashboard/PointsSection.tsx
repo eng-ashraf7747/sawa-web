@@ -1,19 +1,15 @@
+// C:\sawa-web\components\dashboard\PointsSection.tsx
+
 "use client";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { getFunctions, httpsCallable } from "firebase/functions";
 import { User } from "@/types";
 import { usePoints } from "@/hooks/usePoints";
+import { TIERS } from "@/constants";
 
 interface PointsSectionProps {
   userData: User | null;
 }
-
-const tierConfig = {
-  bronze: { label: "برونزي", color: "#cd7f32", bg: "#fdf3e7", icon: "🥉" },
-  silver: { label: "فضي", color: "#9e9e9e", bg: "#f5f5f5", icon: "🥈" },
-  gold: { label: "ذهبي", color: "#c9a84c", bg: "#fefce8", icon: "🥇" },
-  diamond: { label: "ماسي", color: "#1a3c6e", bg: "#eff6ff", icon: "💎" },
-};
 
 const referralStatusConfig = {
   active: { label: "فعال", color: "#16a34a", bg: "#dcfce7" },
@@ -28,10 +24,11 @@ export default function PointsSection({ userData }: PointsSectionProps) {
   const [requesting, setRequesting] = useState(false);
   const [requestMsg, setRequestMsg] = useState<{ type: "success" | "error"; text: string } | null>(null);
 
-  const tier = tierConfig[userData?.tier ?? "bronze"];
+  const tierKey = userData?.tier ?? "bronze";
+  const tier = TIERS[tierKey] || TIERS.bronze;
   const referralStatus = referralStatusConfig[userData?.referralStatus ?? "expired"];
 
-  // ─── حساب حالة الزر ───────────────────────────────────────
+  // ─── حساب حالة الزر ─────────────────────────────
   const now = new Date();
   const currentMonth = `${now.getFullYear()}-${now.getMonth() + 1}`;
   const requestCount = userData?.referralRequestMonth === currentMonth
@@ -49,7 +46,7 @@ export default function PointsSection({ userData }: PointsSectionProps) {
 
   const disabledReason = getDisabledReason();
 
-  // ─── نسخ الكود ────────────────────────────────────────────
+  // ─── نسخ الكود ─────────────────────────────
   const handleCopy = async () => {
     if (!userData?.referralCode) return;
     await navigator.clipboard.writeText(userData.referralCode);
@@ -57,7 +54,7 @@ export default function PointsSection({ userData }: PointsSectionProps) {
     setTimeout(() => setCopied(false), 2000);
   };
 
-  // ─── طلب كود جديد ─────────────────────────────────────────
+  // ─── طلب كود جديد ─────────────────────────────
   const handleRequestCode = async () => {
     if (!canRequest || requesting) return;
     setRequesting(true);
@@ -75,7 +72,15 @@ export default function PointsSection({ userData }: PointsSectionProps) {
     }
   };
 
-  // ─── تاريخ انتهاء الكود ───────────────────────────────────
+  // ─── مسح رسالة النتيجة تلقائيًا بعد 5 ثواني ─────────────────────────────
+  useEffect(() => {
+    if (requestMsg) {
+      const timer = setTimeout(() => setRequestMsg(null), 5000);
+      return () => clearTimeout(timer);
+    }
+  }, [requestMsg]);
+
+  // ─── تاريخ انتهاء الكود ─────────────────────────────
   const getExpiryText = () => {
     if (!userData?.referralActivatedAt) return "";
     const raw = userData.referralActivatedAt as unknown as { toDate?: () => Date } | Date;
@@ -112,7 +117,7 @@ export default function PointsSection({ userData }: PointsSectionProps) {
               style={{ backgroundColor: tier.bg }}>
               {tier.icon}
             </div>
-            <span className="text-xs font-bold" style={{ color: tier.color }}>{tier.label}</span>
+            <span className="text-xs font-bold" style={{ color: tier.color }}>{tier.nameAr}</span>
           </div>
         </div>
       </div>
@@ -240,7 +245,7 @@ export default function PointsSection({ userData }: PointsSectionProps) {
   );
 }
 
-// ─── مكون صف النقاط ───────────────────────────────────────────
+// ─── مكون صف النقاط ─────────────────────────────
 function PointsRow({ icon, label, points, positive }: {
   icon: string; label: string; points: number; positive: boolean;
 }) {

@@ -1,7 +1,7 @@
 // C:\sawa-web\components\dashboard\DashboardLayout.tsx
 
 "use client";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useUser } from "@/hooks/useUser";
 import { useActiveCategories } from "@/hooks/useCategories";
 import { useUserBookings } from "@/hooks/useBookings";
@@ -16,15 +16,19 @@ import CategoryGrid from "@/components/home/CategoryGrid";
 import BookingCompletionModal from "./BookingCompletionModal";
 import BookingsFilters from "@/components/shared/BookingsFilters";
 import { Booking, BOOKING_STATUS_LABELS } from "@/types/booking";
-import { useState as useLocalState } from "react";
 
 type ActiveSection = "home" | "deals" | "requests" | "points" | "profile" | "bookings" | string;
 
 function BookingsSection() {
   const { bookings, loading, error } = useUserBookings();
   const { complete } = useBookingActions();
-  const [selectedBooking, setSelectedBooking] = useLocalState <Booking | null>(null);
-  const [filteredBookings, setFilteredBookings] = useLocalState<Booking[]>([]);
+  const [selectedBooking, setSelectedBooking] = useState<Booking | null>(null);
+  const [filteredBookings, setFilteredBookings] = useState<Booking[]>([]);
+
+  // تحديث الفلتر تلقائياً عند تغيير الحجوزات
+  useEffect(() => {
+    setFilteredBookings(bookings);
+  }, [bookings]);
 
   if (loading) {
     return (
@@ -50,8 +54,8 @@ function BookingsSection() {
 
   const hasFilteredResults = filteredBookings.length > 0;
 
-  const statusColors: Record <string, string> = {
-    pending:   "bg-yellow-100 text-yellow-700",
+  const statusColors: Record<string, string> = {
+    pending: "bg-yellow-100 text-yellow-700",
     delivered: "bg-blue-100 text-blue-700",
     completed: "bg-green-100 text-green-700",
     cancelled: "bg-red-100 text-red-700",
@@ -78,14 +82,13 @@ function BookingsSection() {
             <div key={booking.id} className="bg-white rounded-2xl shadow-sm border border-gray-100 p-4">
               <div className="flex items-start justify-between mb-3">
                 <p className="font-bold text-[#1a3c6e] text-sm">{booking.dealTitle}</p>
-                <span className={`text-xs font-semibold px-2 py-1 rounded-full ${statusColors[booking.status]}`}>
-                  {BOOKING_STATUS_LABELS[booking.status]}
+                <span className={`text-xs font-semibold px-2 py-1 rounded-full ${statusColors[booking.status] || "bg-gray-100 text-gray-600"}`}>
+                  {BOOKING_STATUS_LABELS[booking.status] || booking.status}
                 </span>
               </div>
               {booking.orderValue && (
                 <p className="text-sm text-gray-600 mb-3">
-                  قيمة الطلب:
-                  <span className="font-bold text-[#1a3c6e] mr-1">{booking.orderValue} جنيه</span>
+                  قيمة الطلب: <span className="font-bold text-[#1a3c6e]">{booking.orderValue} جنيه</span>
                 </p>
               )}
               {booking.status === "delivered" && (
@@ -117,11 +120,13 @@ function MainContent({
   onSectionChange,
   userData,
   categoriesCount,
+  purchasesCount,
 }: {
   activeSection: ActiveSection;
   onSectionChange: (section: string) => void;
-  userData: ReturnType <typeof useUser>["userData"];
+  userData: ReturnType<typeof useUser>["userData"];
   categoriesCount: number;
+  purchasesCount: number;
 }) {
   const { activeCount } = useUserRequests(userData?.uid ?? "");
 
@@ -130,6 +135,7 @@ function MainContent({
       userData={userData}
       categoriesCount={categoriesCount}
       requestsCount={activeCount}
+      purchasesCount={purchasesCount}
       onCardClick={onSectionChange}
       activeSection={activeSection}
     />
@@ -175,7 +181,8 @@ function MainContent({
 export default function DashboardLayout() {
   const { userData, loading } = useUser();
   const { categories } = useActiveCategories();
-  const [activePage, setActivePage] = useState("home");
+  const { bookings } = useUserBookings();
+  const [activePage, setActivePage] = useState<ActiveSection>("home");
 
   if (loading) {
     return (
@@ -203,6 +210,7 @@ export default function DashboardLayout() {
             onSectionChange={setActivePage}
             userData={userData}
             categoriesCount={categories.length}
+            purchasesCount={bookings.length}
           />
         </main>
       </div>

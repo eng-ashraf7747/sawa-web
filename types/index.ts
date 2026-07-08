@@ -8,7 +8,7 @@ export interface User {
   photoURL?: string;
   city: string;
   role: "user" | "vendor" | "admin";
-  tier: "bronze" | "silver" | "gold" | "diamond";
+  tier: "regular" | "bronze" | "silver" | "gold" | "diamond";
   points: number;
   referralCode: string;
   referralStatus: "active" | "expired" | "pending" | "rejected";
@@ -61,6 +61,15 @@ export interface NavLink {
   labelAr: string;
   href: string;
   badgeAr?: string;
+}
+
+export interface TierConfig {
+  nameAr: string;
+  min: number;
+  max: number;
+  color: string;
+  bg: string;
+  icon: string;
 }
 
 export type AuthMode = "login" | "register" | "forgotPassword";

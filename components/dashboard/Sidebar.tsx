@@ -1,31 +1,20 @@
 // C:\sawa-web\components\dashboard\Sidebar.tsx
+
 "use client";
 
 import { useState, memo } from "react";
 import Image from "next/image";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { logout } from "@/lib/auth";
 import { User } from "@/types";
+import { TIERS } from "@/constants";
 
 interface SidebarProps {
   userData: User | null;
   activePage: string;
   onNavigate: (page: string) => void;
 }
-
-const tierColors: Record<string, string> = {
-  bronze: "#cd7f32",
-  silver: "#c0c0c0",
-  gold: "#c9a84c",
-  diamond: "#E8F4FD",
-};
-
-const tierNames: Record<string, string> = {
-  bronze: "برونزي",
-  silver: "فضي",
-  gold: "ذهبي",
-  diamond: "ماسي",
-};
 
 const NavItem = memo(function NavItem({
   id,
@@ -69,8 +58,7 @@ export default function Sidebar({
   const [accountOpen, setAccountOpen] = useState(false);
 
   const tierKey = userData?.tier ?? "bronze";
-  const tierColor = tierColors[tierKey];
-  const tierName = tierNames[tierKey];
+  const tier = TIERS[tierKey] || TIERS.bronze;
 
   const handleLogout = async () => {
     await logout();
@@ -104,18 +92,18 @@ export default function Sidebar({
       <div className="flex flex-col items-center py-6 px-4 border-b border-white/10">
         <div
           className="w-16 h-16 rounded-full bg-white/20 flex items-center justify-center text-2xl mb-3"
-          style={{ border: `2px solid ${tierColor}` }}
+          style={{ border: `2px solid ${tier.color}` }}
         >
           👤
         </div>
-        <p className="font-bold text-base" style={{ color: tierColor }}>
+        <p className="font-bold text-base" style={{ color: tier.color }}>
           {userData?.displayName ?? "مستخدم"}
         </p>
         <span
           className="text-xs px-3 py-1 rounded-full mt-1 font-semibold"
-          style={{ backgroundColor: `${tierColor}22`, color: tierColor }}
+          style={{ backgroundColor: `${tier.color}22`, color: tier.color }}
         >
-          {tierName} ⭐
+          {tier.nameAr} ⭐
         </span>
         <p className="text-white/60 text-xs mt-2">
           {userData?.points ?? 0} نقطة
@@ -170,22 +158,20 @@ export default function Sidebar({
           <div className="flex flex-col gap-0.5">
             <NavItem id="profile" label="بياناتي" isActive={activePage === "profile"} isChild onClick={() => onNavigate("profile")} />
             <NavItem id="points" label="سجل نقاطي" isActive={activePage === "points"} isChild onClick={() => onNavigate("points")} />
-            
-            
-                        <a 
-              href="/contact" 
+
+            <Link
+              href="/contact"
               className="w-full flex items-center gap-3 px-4 py-2.5 rounded-xl text-white/70 hover:bg-white/10 hover:text-white transition-all pr-10 py-2"
             >
               💬 تواصل معنا
-            </a>
-            
-            <a 
-              href="/legal/terms" 
+            </Link>
+
+            <Link
+              href="/legal/terms"
               className="w-full flex items-center gap-3 px-4 py-2.5 rounded-xl text-white/70 hover:bg-white/10 hover:text-white transition-all pr-10 py-2"
             >
               📄 شروط الاستخدام
-            </a>
-            
+            </Link>
           </div>
         )}
       </nav>
