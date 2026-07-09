@@ -159,7 +159,7 @@ function MainContent({
             onBack={() => onCategoryChange(null)}
           />
         ) : (
-          <CategoryGrid columns={4} />
+          <CategoryGrid columns={4} onSelectCategory={onCategoryChange} />
         )}
       </>
     );
