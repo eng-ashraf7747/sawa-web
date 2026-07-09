@@ -6,24 +6,50 @@ import { useActiveCategories } from "@/hooks/useCategories";
 import { Category } from "@/types/category";
 
 // ─── Category Card ─────────────────────────────
-const CategoryCard = memo(({ category }: { category: Category }) => {
+interface CategoryCardProps {
+  category: Category;
+  onSelectCategory?: (categoryId: string) => void;
+}
+
+const CategoryCard = memo(({ category, onSelectCategory }: CategoryCardProps) => {
+  const content = (
+    <div className="flex flex-col items-center text-center">
+      <span className="text-4xl mb-3 group-hover:scale-110 transition-transform duration-200">
+        {category.emoji}
+      </span>
+      <h3 className="text-[#1a1a2e] font-bold text-sm mb-1">
+        {category.name}
+      </h3>
+      <p className="text-[#c9a84c] text-sm font-semibold">
+        {category.subtitle}
+      </p>
+    </div>
+  );
+
+  const className = "bg-white rounded-2xl p-5 border border-[#e8eaed] shadow-sm hover:shadow-md hover:border-[#c9a84c] transition-all duration-200 group block w-full text-right";
+
+  // جوه الداشبورد: تنقل داخلي بالحالة (Client State)، بدون تغيير الرابط —
+  // بيتجنب مشكلة "نفس الرابط = مفيش تنقل فعلي" لما المستخدم يرجع لنفس الفئة من الـ Sidebar
+  if (onSelectCategory) {
+    return (
+      <button
+        onClick={() => onSelectCategory(category.id)}
+        className={className}
+        aria-label={`عرض فئة ${category.name}`}
+      >
+        {content}
+      </button>
+    );
+  }
+
+  // خارج سياق التنقل الداخلي (مثلاً القسم المدمج في الرئيسية): رابط حقيقي قابل للمشاركة
   return (
     <Link
       href={`/deals/${category.id}`}
-      className="bg-white rounded-2xl p-5 border border-[#e8eaed] shadow-sm hover:shadow-md hover:border-[#c9a84c] transition-all duration-200 group block"
+      className={className}
       aria-label={`عرض فئة ${category.name}`}
     >
-      <div className="flex flex-col items-center text-center">
-        <span className="text-4xl mb-3 group-hover:scale-110 transition-transform duration-200">
-          {category.emoji}
-        </span>
-        <h3 className="text-[#1a1a2e] font-bold text-sm mb-1">
-          {category.name}
-        </h3>
-        <p className="text-[#c9a84c] text-sm font-semibold">
-          {category.subtitle}
-        </p>
-      </div>
+      {content}
     </Link>
   );
 });
@@ -33,6 +59,7 @@ CategoryCard.displayName = "CategoryCard";
 // ─── Category Grid ─────────────────────────────
 interface CategoryGridProps {
   columns?: 2 | 3 | 4;
+  onSelectCategory?: (categoryId: string) => void;
 }
 
 const colsClass: Record<number, string> = {
@@ -41,7 +68,7 @@ const colsClass: Record<number, string> = {
   4: "grid-cols-2 sm:grid-cols-3 lg:grid-cols-4",
 };
 
-export default function CategoryGrid({ columns = 2 }: CategoryGridProps) {
+export default function CategoryGrid({ columns = 2, onSelectCategory }: CategoryGridProps) {
   const { categories, loading, error } = useActiveCategories();
 
   if (loading) {
@@ -94,7 +121,7 @@ export default function CategoryGrid({ columns = 2 }: CategoryGridProps) {
 
       <div className={`grid ${colsClass[columns]} gap-4`}>
         {categories.map((cat) => (
-          <CategoryCard key={cat.id} category={cat} />
+          <CategoryCard key={cat.id} category={cat} onSelectCategory={onSelectCategory} />
         ))}
       </div>
     </div>
