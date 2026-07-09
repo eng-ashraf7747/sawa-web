@@ -12,9 +12,13 @@ interface Props {
   onUpdated: () => void;
 }
 
-function formatDateTime(date: Date | null): string {
+function formatDateTime(date: Date | string | null | undefined): string {
   if (!date) return "";
-  return new Date(date).toLocaleDateString("ar-EG", {
+  const parsedDate = new Date(date);
+  
+  if (isNaN(parsedDate.getTime())) return ""; 
+
+  return parsedDate.toLocaleDateString("ar-EG", {
     day: "numeric",
     month: "short",
     hour: "2-digit",
