@@ -61,6 +61,9 @@ export default function Sidebar({
   const tier = TIERS[tierKey] || TIERS.bronze;
 
   const handleLogout = async () => {
+    const confirmed = window.confirm("هل أنت متأكد من رغبتك في تسجيل الخروج؟");
+    if (!confirmed) return;
+
     await logout();
     router.push("/");
   };

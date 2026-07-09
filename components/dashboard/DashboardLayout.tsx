@@ -1,7 +1,7 @@
 // C:\sawa-web\components\dashboard\DashboardLayout.tsx
 
 "use client";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useUser } from "@/hooks/useUser";
 import { useActiveCategories } from "@/hooks/useCategories";
 import { useUserBookings } from "@/hooks/useBookings";
@@ -13,11 +13,16 @@ import StatsBar from "./StatsBar";
 import RequestsSection from "./RequestsSection";
 import PointsSection from "./PointsSection";
 import CategoryGrid from "@/components/home/CategoryGrid";
+import CategoryDealsView from "./CategoryDealsView";
 import BookingCompletionModal from "./BookingCompletionModal";
 import BookingsFilters from "@/components/shared/BookingsFilters";
 import { Booking, BOOKING_STATUS_LABELS } from "@/types/booking";
 
 type ActiveSection = "home" | "deals" | "requests" | "points" | "profile" | "bookings" | string;
+
+interface DashboardLayoutProps {
+  initialCategoryId?: string;
+}
 
 function BookingsSection() {
   const { bookings, loading, error } = useUserBookings();
@@ -25,7 +30,6 @@ function BookingsSection() {
   const [selectedBooking, setSelectedBooking] = useState<Booking | null>(null);
   const [filteredBookings, setFilteredBookings] = useState<Booking[]>([]);
 
-  // تحديث الفلتر تلقائياً عند تغيير الحجوزات
   useEffect(() => {
     setFilteredBookings(bookings);
   }, [bookings]);
@@ -121,12 +125,16 @@ function MainContent({
   userData,
   categoriesCount,
   purchasesCount,
+  selectedCategoryId,
+  onCategoryChange,
 }: {
   activeSection: ActiveSection;
   onSectionChange: (section: string) => void;
   userData: ReturnType<typeof useUser>["userData"];
   categoriesCount: number;
   purchasesCount: number;
+  selectedCategoryId: string | null;
+  onCategoryChange: (categoryId: string | null) => void;
 }) {
   const { activeCount } = useUserRequests(userData?.uid ?? "");
 
@@ -142,14 +150,29 @@ function MainContent({
   );
 
   if (activeSection === "deals") {
-    return <>{statsBar}<CategoryGrid columns={4} /></>;
+    return (
+      <>
+        {statsBar}
+        {selectedCategoryId ? (
+          <CategoryDealsView
+            categoryId={selectedCategoryId}
+            onBack={() => onCategoryChange(null)}
+          />
+        ) : (
+          <CategoryGrid columns={4} />
+        )}
+      </>
+    );
   }
+
   if (activeSection === "requests") {
     return <>{statsBar}<RequestsSection userId={userData?.uid ?? ""} userName={userData?.displayName ?? ""} /></>;
   }
+
   if (activeSection === "points") {
     return <>{statsBar}<PointsSection userData={userData} /></>;
   }
+
   if (activeSection === "profile") {
     return (
       <>
@@ -158,6 +181,7 @@ function MainContent({
       </>
     );
   }
+
   if (activeSection === "bookings") {
     return (
       <>
@@ -178,11 +202,24 @@ function MainContent({
   );
 }
 
-export default function DashboardLayout() {
+export default function DashboardLayout({ initialCategoryId }: DashboardLayoutProps = {}) {
   const { userData, loading } = useUser();
   const { categories } = useActiveCategories();
   const { bookings } = useUserBookings();
-  const [activePage, setActivePage] = useState<ActiveSection>("home");
+
+  const [activePage, setActivePage] = useState<ActiveSection>(initialCategoryId ? "deals" : "home");
+  const [selectedCategoryId, setSelectedCategoryId] = useState<string | null>(initialCategoryId ?? null);
+
+  const handleNavigate = useCallback((section: string) => {
+    setActivePage(section);
+    if (section === "deals") {
+      setSelectedCategoryId(null);
+    }
+  }, []);
+
+  const handleCategoryChange = useCallback((categoryId: string | null) => {
+    setSelectedCategoryId(categoryId);
+  }, []);
 
   if (loading) {
     return (
@@ -200,17 +237,19 @@ export default function DashboardLayout() {
       <Sidebar
         userData={userData}
         activePage={activePage}
-        onNavigate={setActivePage}
+        onNavigate={handleNavigate}
       />
       <div className="flex-1 flex flex-col min-h-screen overflow-hidden">
         <DashboardHeader userData={userData} activePage={activePage} />
         <main className="flex-1 p-4 md:p-8 flex flex-col gap-6 pb-24 md:pb-8">
           <MainContent
             activeSection={activePage}
-            onSectionChange={setActivePage}
+            onSectionChange={handleNavigate}
             userData={userData}
             categoriesCount={categories.length}
             purchasesCount={bookings.length}
+            selectedCategoryId={selectedCategoryId}
+            onCategoryChange={handleCategoryChange}
           />
         </main>
       </div>

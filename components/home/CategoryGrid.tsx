@@ -1,19 +1,17 @@
 // C:\sawa-web\components\home\CategoryGrid.tsx
-
 "use client";
-
-import { useRouter } from "next/navigation";
+import { memo } from "react";
+import Link from "next/link";
 import { useActiveCategories } from "@/hooks/useCategories";
 import { Category } from "@/types/category";
 
-// ─── Category Card ─────────────────────────────────────────
-function CategoryCard({ category }: { category: Category }) {
-  const router = useRouter();
-
+// ─── Category Card ─────────────────────────────
+const CategoryCard = memo(({ category }: { category: Category }) => {
   return (
-    <div
-      onClick={() => window.location.href = `/deals/${category.id}`}
-      className="bg-white rounded-2xl p-5 border border-[#e8eaed] shadow-sm hover:shadow-md hover:border-[#c9a84c] transition-all duration-200 cursor-pointer group"
+    <Link
+      href={`/deals/${category.id}`}
+      className="bg-white rounded-2xl p-5 border border-[#e8eaed] shadow-sm hover:shadow-md hover:border-[#c9a84c] transition-all duration-200 group block"
+      aria-label={`عرض فئة ${category.name}`}
     >
       <div className="flex flex-col items-center text-center">
         <span className="text-4xl mb-3 group-hover:scale-110 transition-transform duration-200">
@@ -26,11 +24,13 @@ function CategoryCard({ category }: { category: Category }) {
           {category.subtitle}
         </p>
       </div>
-    </div>
+    </Link>
   );
-}
+});
 
-// ─── Category Grid ─────────────────────────────────────────
+CategoryCard.displayName = "CategoryCard";
+
+// ─── Category Grid ─────────────────────────────
 interface CategoryGridProps {
   columns?: 2 | 3 | 4;
 }
@@ -91,6 +91,7 @@ export default function CategoryGrid({ columns = 2 }: CategoryGridProps) {
           {categories.length}
         </span>
       </div>
+
       <div className={`grid ${colsClass[columns]} gap-4`}>
         {categories.map((cat) => (
           <CategoryCard key={cat.id} category={cat} />
