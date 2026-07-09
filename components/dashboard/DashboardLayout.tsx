@@ -127,6 +127,7 @@ function MainContent({
   purchasesCount,
   selectedCategoryId,
   onCategoryChange,
+  onSelectCategoryFromHome,
 }: {
   activeSection: ActiveSection;
   onSectionChange: (section: string) => void;
@@ -135,6 +136,7 @@ function MainContent({
   purchasesCount: number;
   selectedCategoryId: string | null;
   onCategoryChange: (categoryId: string | null) => void;
+  onSelectCategoryFromHome: (categoryId: string) => void;
 }) {
   const { activeCount } = useUserRequests(userData?.uid ?? "");
 
@@ -195,7 +197,7 @@ function MainContent({
     <>
       {statsBar}
       <div className="flex flex-col md:flex-row gap-6">
-        <CategoryGrid columns={2} />
+        <CategoryGrid columns={2} onSelectCategory={onSelectCategoryFromHome} />
         <RequestsSection userId={userData?.uid ?? ""} userName={userData?.displayName ?? ""} />
       </div>
     </>
@@ -218,6 +220,13 @@ export default function DashboardLayout({ initialCategoryId }: DashboardLayoutPr
   }, []);
 
   const handleCategoryChange = useCallback((categoryId: string | null) => {
+    setSelectedCategoryId(categoryId);
+  }, []);
+
+  // اختيار فئة من شبكة الفئات المصغّرة في "الرئيسية" — لازم يبدّل القسم النشط
+  // لـ "deals" كمان، مش بس يحدد الفئة، عشان تظهر شاشة العروض فعليًا
+  const handleSelectCategoryFromHome = useCallback((categoryId: string) => {
+    setActivePage("deals");
     setSelectedCategoryId(categoryId);
   }, []);
 
@@ -250,6 +259,7 @@ export default function DashboardLayout({ initialCategoryId }: DashboardLayoutPr
             purchasesCount={bookings.length}
             selectedCategoryId={selectedCategoryId}
             onCategoryChange={handleCategoryChange}
+            onSelectCategoryFromHome={handleSelectCategoryFromHome}
           />
         </main>
       </div>
