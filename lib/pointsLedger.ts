@@ -12,7 +12,8 @@ import { POINTS_LEDGER_SUBCOLLECTION } from "@/types/analytics";
 
 // ─── جلب إجمالي النقاط الممنوحة في فترة (عبر كل المستخدمين) ─────────────────
 // يستخدم collectionGroup للاستعلام عبر كل الـ Subcollections المسمّاة "pointsLedger"
-// تحت كل مستخدم في نفس الوقت — بدون الحاجة للف يدوي على كل مستخدم
+// تحت كل مستخدم في نفس الوقت — يتطلب فهرس Collection Group واحد في Firestore
+// (يظهر رابط إنشائه تلقائيًا في الكونسول أول مرة يُستدعى فيها هذا الاستعلام)
 export async function getTotalPointsGranted(
   startDate: Date,
   endDate: Date
@@ -36,7 +37,7 @@ export async function getTotalPointsGranted(
 
 // ─── جلب إجمالي النقاط المستردة/المخصومة في فترة ─────────────────────────
 // ملاحظة: لا يوجد حاليًا أي نوع سطر يمثّل "استرداد" فعليًا في البيانات الحقيقية
-// (نظام استبدال النقاط بالاشتراك غير مبني بعد) — الدالة جاهزة ومصمَّمة بشكل عام
+// (نظام استبدال النقاط بالاشتراك غير مبني بعد) — الدالة مصمَّمة بشكل عام
 // (أي نقاط سالبة، أيًا كان نوعها) لتلتقط أي خصم مستقبلي بدون تعديل لاحق
 export async function getTotalPointsRedeemed(
   startDate: Date,
