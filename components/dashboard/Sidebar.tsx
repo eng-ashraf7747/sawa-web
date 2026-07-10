@@ -56,14 +56,15 @@ export default function Sidebar({
   const router = useRouter();
   const [servicesOpen, setServicesOpen] = useState(true);
   const [accountOpen, setAccountOpen] = useState(false);
+  const [avatarLoadFailed, setAvatarLoadFailed] = useState(false);
 
   const tierKey = userData?.tier ?? "bronze";
   const tier = TIERS[tierKey] || TIERS.bronze;
+  const hasAvatarPhoto = Boolean(userData?.photoURL) && !avatarLoadFailed;
 
   const handleLogout = async () => {
     const confirmed = window.confirm("هل أنت متأكد من رغبتك في تسجيل الخروج؟");
     if (!confirmed) return;
-
     await logout();
     router.push("/");
   };
@@ -71,9 +72,9 @@ export default function Sidebar({
   return (
     <aside
       className="hidden md:flex w-[260px] min-h-screen flex-col"
-      style={{
-        background: "linear-gradient(180deg, #1a3c6e 0%, #0f2447 100%)",
-      }}
+      style={{ background: "linear-gradient(180deg, #1a3c6e 0%, #0f2447 100%)" }}
+      role="navigation"
+      aria-label="القائمة الجانبية"
     >
       {/* Logo */}
       <div className="flex justify-center items-center py-6 border-b border-white/10">
@@ -84,6 +85,7 @@ export default function Sidebar({
             width={140}
             height={80}
             className="object-contain"
+            priority
             onError={(e) => {
               (e.target as HTMLImageElement).style.display = "none";
             }}
@@ -94,10 +96,20 @@ export default function Sidebar({
       {/* User Profile */}
       <div className="flex flex-col items-center py-6 px-4 border-b border-white/10">
         <div
-          className="w-16 h-16 rounded-full bg-white/20 flex items-center justify-center text-2xl mb-3"
+          className="w-16 h-16 rounded-full bg-white/20 overflow-hidden flex items-center justify-center text-2xl mb-3"
           style={{ border: `2px solid ${tier.color}` }}
         >
-          👤
+          {hasAvatarPhoto ? (
+            // eslint-disable-next-line @next/next/no-img-element -- رابط خارجي ديناميكي من Firebase Storage؛ next/image يتطلب images.remotePatterns غير مُعدّة حاليًا في next.config.ts
+            <img
+              src={userData!.photoURL!}
+              alt="الصورة الشخصية"
+              className="w-full h-full object-cover"
+              onError={() => setAvatarLoadFailed(true)}
+            />
+          ) : (
+            <span aria-hidden="true">👤</span>
+          )}
         </div>
         <p className="font-bold text-base" style={{ color: tier.color }}>
           {userData?.displayName ?? "مستخدم"}
@@ -162,17 +174,10 @@ export default function Sidebar({
             <NavItem id="profile" label="بياناتي" isActive={activePage === "profile"} isChild onClick={() => onNavigate("profile")} />
             <NavItem id="points" label="سجل نقاطي" isActive={activePage === "points"} isChild onClick={() => onNavigate("points")} />
 
-            <Link
-              href="/contact"
-              className="w-full flex items-center gap-3 px-4 py-2.5 rounded-xl text-white/70 hover:bg-white/10 hover:text-white transition-all pr-10 py-2"
-            >
+            <Link href="/contact" className="w-full flex items-center gap-3 px-4 py-2.5 rounded-xl text-white/70 hover:bg-white/10 hover:text-white transition-all pr-10 py-2">
               💬 تواصل معنا
             </Link>
-
-            <Link
-              href="/legal/terms"
-              className="w-full flex items-center gap-3 px-4 py-2.5 rounded-xl text-white/70 hover:bg-white/10 hover:text-white transition-all pr-10 py-2"
-            >
+            <Link href="/legal/terms" className="w-full flex items-center gap-3 px-4 py-2.5 rounded-xl text-white/70 hover:bg-white/10 hover:text-white transition-all pr-10 py-2">
               📄 شروط الاستخدام
             </Link>
           </div>
@@ -184,6 +189,7 @@ export default function Sidebar({
         <button
           onClick={handleLogout}
           className="w-full flex items-center gap-3 px-4 py-2.5 rounded-xl text-red-300 hover:bg-red-500/20 hover:text-red-200 transition-all cursor-pointer"
+          aria-label="تسجيل الخروج"
         >
           <span>🚪</span>
           <span className="text-sm">تسجيل الخروج</span>

@@ -1,4 +1,5 @@
 // C:\sawa-web\components\dashboard\StatsBar.tsx
+
 "use client";
 import { memo } from "react";
 import { User } from "@/types";
@@ -83,7 +84,7 @@ const CombinedTierPointsCard = memo(({
           {tierIcon}
         </div>
         <div>
-          <p className="text-[#6b7280] text-[10px] md:text-xs mb-0.5 md:mb-1">الفئة الحالية</p>
+          <p className="text-[#6b7280] text-[10px] md:text-xs mb-0.5 md:mb-1">بياناتي</p>
           <p className={`text-sm md:text-lg font-extrabold ${isTierActive ? "text-[#c9a84c]" : "text-[#1a3c6e]"}`}>
             {tierNameAr}
           </p>

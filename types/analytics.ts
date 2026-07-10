@@ -1,5 +1,4 @@
 // C:\sawa-web\types\analytics.ts
-
 // ─── مصادر الزيارة ────────────────────────────────────────
 export type TrafficSource =
   | "facebook_page"
@@ -13,9 +12,8 @@ export type TrafficSource =
 // ─── نوع الجهاز ───────────────────────────────────────────
 export type DeviceType = "mobile" | "tablet" | "desktop";
 
-// ─── أنواع الأحداث ────────────────────────────────────────
-export type EventType =
-  // المستخدم
+// ─── أنواع الأحداث (مقسمة لتسهيل الصيانة) ─────────────────────
+export type UserEventType =
   | "user_registered"
   | "user_verified_email"
   | "user_logged_in"
@@ -24,50 +22,50 @@ export type EventType =
   | "user_used_referral"
   | "user_inactive_7days"
   | "user_inactive_30days"
-  | "user_churned"
+  | "user_churned";
 
-  // العروض
+export type OfferEventType =
   | "offer_viewed"
   | "offer_clicked"
   | "offer_shared"
-  | "offer_requested"
+  | "offer_requested";
 
-  // الحجوزات
+export type BookingEventType =
   | "booking_created"
   | "booking_contact_whatsapp"
   | "booking_contact_phone"
   | "booking_delivered"
   | "booking_completed"
   | "booking_cancelled"
-  | "booking_auto_cancelled"
+  | "booking_auto_cancelled";
 
-  // التقييمات
+export type ReviewEventType =
   | "review_product_submitted"
   | "review_vendor_submitted"
   | "review_user_submitted"
-  | "review_approved"
+  | "review_approved";
 
-  // النقاط
+export type PointsEventType =
   | "points_earned_registration"
   | "points_earned_referral"
   | "points_earned_transaction"
   | "points_earned_review"
   | "points_redeemed_subscription"
-  | "points_expired"
+  | "points_expired";
 
-  // الاشتراكات
+export type SubscriptionEventType =
   | "subscription_started"
   | "subscription_renewed_cash"
   | "subscription_renewed_points"
   | "subscription_expired"
-  | "subscription_cancelled"
+  | "subscription_cancelled";
 
-  // الطلبات
+export type RequestEventType =
   | "request_created"
   | "request_deleted"
-  | "request_fulfilled"
+  | "request_fulfilled";
 
-  // المورد
+export type VendorEventType =
   | "vendor_registered"
   | "vendor_offer_created"
   | "vendor_offer_approved"
@@ -75,6 +73,16 @@ export type EventType =
   | "vendor_inactive_7days"
   | "vendor_responded_fast"
   | "vendor_responded_slow";
+
+export type EventType =
+  | UserEventType
+  | OfferEventType
+  | BookingEventType
+  | ReviewEventType
+  | PointsEventType
+  | SubscriptionEventType
+  | RequestEventType
+  | VendorEventType;
 
 // ─── مصادر النقاط ────────────────────────────────────────
 export type PointsSource =
@@ -103,7 +111,8 @@ export interface AnalyticsEvent {
   sessionId: string;
   value: number | null;
   pointsChange: number | null;
-  metadata: Record <string, unknown>;
+  metadata: Record<string, unknown>;
+  version?: string; // لدعم تغييرات مستقبلية
 }
 
 // ─── نوع سطر دفتر النقاط ────────────────────────────────
@@ -133,7 +142,7 @@ export interface TrackEventInput {
   requestId?: string | null;
   value?: number | null;
   pointsChange?: number | null;
-  metadata?: Record <string, unknown>;
+  metadata?: Record<string, unknown>;
 }
 
 // ─── Input لإضافة سطر نقاط ───────────────────────────────
@@ -155,5 +164,5 @@ export const SUBSCRIPTION_VALUE_EGP = 50;
 
 export const ANALYTICS_COLLECTIONS = {
   EVENTS: "analytics_events",
-  POINTS_LEDGER: "points_ledger",
+  POINTS_LEDGER: "pointsLedger",
 } as const;
