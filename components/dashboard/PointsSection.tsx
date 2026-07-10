@@ -23,6 +23,7 @@ export default function PointsSection({ userData }: PointsSectionProps) {
   const [copied, setCopied] = useState(false);
   const [requesting, setRequesting] = useState(false);
   const [requestMsg, setRequestMsg] = useState<{ type: "success" | "error"; text: string } | null>(null);
+  const [sourcesOpen, setSourcesOpen] = useState(true);
 
   const tierKey = userData?.tier ?? "bronze";
   const tier = TIERS[tierKey] || TIERS.bronze;
@@ -93,6 +94,12 @@ export default function PointsSection({ userData }: PointsSectionProps) {
     })}`;
   };
 
+  const hasAnyEarningSource =
+    summary.signupBonus > 0 ||
+    summary.referralOwner > 0 ||
+    summary.referralJoiner > 0 ||
+    summary.carryOver > 0;
+
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-[400px]">
@@ -122,17 +129,40 @@ export default function PointsSection({ userData }: PointsSectionProps) {
         </div>
       </div>
 
-      {/* ─── كيف كسبت نقاطك ─── */}
+      {/* ─── كيف كسبت نقاطك (Accordion) ─── */}
       <div className="bg-white rounded-2xl border border-[#e8eaed] shadow-sm overflow-hidden">
-        <div className="px-6 py-4 border-b border-[#e8eaed] bg-[#f8fafc]">
+        <button
+          onClick={() => setSourcesOpen((prev) => !prev)}
+          aria-expanded={sourcesOpen}
+          aria-controls="points-sources-panel"
+          className="w-full flex items-center justify-between px-6 py-4 border-b border-[#e8eaed] bg-[#f8fafc] hover:bg-[#f0f4f8] transition-colors cursor-pointer focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#1a3c6e]"
+        >
           <h3 className="text-[#1a3c6e] font-bold text-base">كيف كسبت نقاطك؟</h3>
-        </div>
-        <div className="divide-y divide-[#f0f4f8]">
-          <PointsRow icon="🎁" label="مكافأة التسجيل" points={summary.signupBonus} positive />
-          <PointsRow icon="👥" label="مشاركة كودك مع الآخرين" points={summary.referralOwner} positive />
-          <PointsRow icon="🎟️" label="انضممت بكود صديق" points={summary.referralJoiner} positive />
-          <PointsRow icon="📦" label="من الشهور السابقة" points={summary.carryOver} positive />
-        </div>
+          <svg
+            className={`w-5 h-5 text-[#1a3c6e] transition-transform duration-200 ${sourcesOpen ? "rotate-180" : ""}`}
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+            aria-hidden="true"
+          >
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+          </svg>
+        </button>
+
+        {sourcesOpen && (
+          <div id="points-sources-panel" className="divide-y divide-[#f0f4f8]">
+            {hasAnyEarningSource ? (
+              <>
+                <PointsRow icon="🎁" label="مكافأة التسجيل" points={summary.signupBonus} positive />
+                <PointsRow icon="👥" label="مشاركة كودك مع الآخرين" points={summary.referralOwner} positive />
+                <PointsRow icon="🎟️" label="انضممت بكود صديق" points={summary.referralJoiner} positive />
+                <PointsRow icon="📦" label="من الشهور السابقة" points={summary.carryOver} positive />
+              </>
+            ) : (
+              <p className="text-center text-[#9ca3af] text-sm py-6">لا توجد مصادر نقاط مسجّلة بعد</p>
+            )}
+          </div>
+        )}
       </div>
 
       {/* ─── استخدمت نقاطك في ─── */}
