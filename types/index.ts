@@ -7,6 +7,9 @@ export interface User {
   phone?: string;
   photoURL?: string;
   city: string;
+  address?: string;
+  gender?: "male" | "female";
+  age?: number;
   role: "user" | "vendor" | "admin";
   tier: "regular" | "bronze" | "silver" | "gold" | "diamond";
   points: number;

@@ -12,6 +12,7 @@ import DashboardHeader from "./DashboardHeader";
 import StatsBar from "./StatsBar";
 import RequestsSection from "./RequestsSection";
 import PointsSection from "./PointsSection";
+import ProfileSection from "./ProfileSection";
 import CategoryGrid from "@/components/home/CategoryGrid";
 import CategoryDealsView from "./CategoryDealsView";
 import BookingCompletionModal from "./BookingCompletionModal";
@@ -179,7 +180,7 @@ function MainContent({
     return (
       <>
         {statsBar}
-        <div className="flex-1 bg-white rounded-2xl border border-[#e8eaed] shadow-sm min-h-[400px]" />
+        <ProfileSection />
       </>
     );
   }
@@ -223,8 +224,6 @@ export default function DashboardLayout({ initialCategoryId }: DashboardLayoutPr
     setSelectedCategoryId(categoryId);
   }, []);
 
-  // اختيار فئة من شبكة الفئات المصغّرة في "الرئيسية" — لازم يبدّل القسم النشط
-  // لـ "deals" كمان، مش بس يحدد الفئة، عشان تظهر شاشة العروض فعليًا
   const handleSelectCategoryFromHome = useCallback((categoryId: string) => {
     setActivePage("deals");
     setSelectedCategoryId(categoryId);
