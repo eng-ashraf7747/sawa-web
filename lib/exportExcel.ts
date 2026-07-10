@@ -3,6 +3,7 @@
 import * as XLSX from "xlsx";
 import {
   collection,
+  collectionGroup,
   getDocs,
   query,
   where,
@@ -10,9 +11,8 @@ import {
   Timestamp,
 } from "firebase/firestore";
 import { db } from "@/lib/firebase";
-import { ANALYTICS_COLLECTIONS } from "@/types/analytics";
+import { ANALYTICS_COLLECTIONS, POINTS_LEDGER_SUBCOLLECTION } from "@/types/analytics";
 
-// ─── مساعد التنسيق ───────────────────────────────────────
 function fmtDate(d: any): string {
   if (!d) return "—";
   const date = d?.toDate ? d.toDate() : new Date(d);
@@ -33,10 +33,9 @@ function str(v: any): string {
   return v ?? "—";
 }
 
-// ─── جلب خريطة الفئات ────────────────────────────────────
-async function getCategoryMap(): Promise <Record <string, string>> {
+async function getCategoryMap(): Promise<Record<string, string>> {
   const snap = await getDocs(collection(db, "categories"));
-  const map: Record <string, string> = {};
+  const map: Record<string, string> = {};
   snap.docs.forEach((d) => { map[d.id] = d.data().name ?? d.id; });
   return map;
 }
@@ -45,7 +44,7 @@ async function getCategoryMap(): Promise <Record <string, string>> {
 async function buildSummarySheet(
   startDate: Date,
   endDate: Date
-): Promise <any[][]> {
+): Promise<any[][]> {
   const start = Timestamp.fromDate(startDate);
   const end = Timestamp.fromDate(endDate);
 
@@ -57,6 +56,7 @@ async function buildSummarySheet(
     )
   );
   const bookings = bookingsSnap.docs.map((d) => d.data());
+
   const completed = bookings.filter((b) => b.status === "completed");
   const totalInvoice = completed.reduce((s, b) => s + (b.orderValue ?? 0), 0);
 
@@ -66,17 +66,19 @@ async function buildSummarySheet(
 
   const pointsSnap = await getDocs(
     query(
-      collection(db, ANALYTICS_COLLECTIONS.POINTS_LEDGER),
-      where("createdAt", ">=", start),
-      where("createdAt", "<=", end)
+      collectionGroup(db, POINTS_LEDGER_SUBCOLLECTION),
+      where("timestamp", ">=", start),
+      where("timestamp", "<=", end)
     )
   );
-  const totalPointsGranted = pointsSnap.docs
-    .filter((d) => d.data().type === "earned")
-    .reduce((s, d) => s + (d.data().points ?? 0), 0);
-  const totalPointsRedeemed = pointsSnap.docs
-    .filter((d) => d.data().type === "redeemed")
-    .reduce((s, d) => s + Math.abs(d.data().points ?? 0), 0);
+  const totalPointsGranted = pointsSnap.docs.reduce((sum, d) => {
+    const points = d.data().points ?? 0;
+    return points > 0 ? sum + points : sum;
+  }, 0);
+  const totalPointsRedeemed = pointsSnap.docs.reduce((sum, d) => {
+    const points = d.data().points ?? 0;
+    return points < 0 ? sum + Math.abs(points) : sum;
+  }, 0);
 
   const conversionRate = bookings.length > 0
     ? Math.round((completed.length / bookings.length) * 100)
@@ -102,12 +104,12 @@ async function buildSummarySheet(
   ];
 }
 
-// ─── Sheet 2: Bookings ────────────────────────────────────
+// ─── Sheet 2: Bookings ─────────────────────────────────────
 async function buildBookingsSheet(
   startDate: Date,
   endDate: Date,
-  categoryMap: Record <string, string>
-): Promise <any[][]> {
+  categoryMap: Record<string, string>
+): Promise<any[][]> {
   const snap = await getDocs(
     query(
       collection(db, "bookings"),
@@ -152,11 +154,11 @@ async function buildBookingsSheet(
   return [headers, ...rows];
 }
 
-// ─── Sheet 3: Users ───────────────────────────────────────
+// ─── Sheet 3: Users ─────────────────────────────────────
 async function buildUsersSheet(
   startDate: Date,
   endDate: Date
-): Promise <any[][]> {
+): Promise<any[][]> {
   const usersSnap = await getDocs(collection(db, "users"));
   const bookingsSnap = await getDocs(collection(db, "bookings"));
 
@@ -165,7 +167,7 @@ async function buildUsersSheet(
   const headers = [
     "userId", "الاسم", "البريد الإلكتروني", "الهاتف",
     "المدينة", "الدور", "مستوى العضوية", "النقاط",
-    "مصدر التسجيل", "كود الإحالة", "مُحال من",
+    "مصدر التسجيل", "كود الإحالة", "محال من",
     "إجمالي الحجوزات", "عمليات مكتملة", "إجمالي الإنفاق",
     "تاريخ التسجيل", "نشط؟"
   ];
@@ -202,7 +204,7 @@ async function buildUsersSheet(
 }
 
 // ─── Sheet 4: Vendors ─────────────────────────────────────
-async function buildVendorsSheet(): Promise <any[][]> {
+async function buildVendorsSheet(): Promise<any[][]> {
   const usersSnap = await getDocs(
     query(collection(db, "users"), where("role", "==", "vendor"))
   );
@@ -241,12 +243,12 @@ async function buildVendorsSheet(): Promise <any[][]> {
   return [headers, ...rows];
 }
 
-// ─── Sheet 5: Analytics Events ────────────────────────────
+// ─── Sheet 5: Analytics Events ─────────────────────────────────────
 async function buildAnalyticsSheet(
   startDate: Date,
   endDate: Date,
-  categoryMap: Record <string, string>
-): Promise <any[][]> {
+  categoryMap: Record<string, string>
+): Promise<any[][]> {
   const snap = await getDocs(
     query(
       collection(db, ANALYTICS_COLLECTIONS.EVENTS),
@@ -288,11 +290,11 @@ async function buildAnalyticsSheet(
   return [headers, ...rows];
 }
 
-// ─── Sheet 6: Commissions ─────────────────────────────────
+// ─── Sheet 6: Commissions ─────────────────────────────────────
 async function buildCommissionsSheet(
   startDate: Date,
   endDate: Date
-): Promise <any[][]> {
+): Promise<any[][]> {
   const snap = await getDocs(
     query(
       collection(db, "commission_ledger"),
@@ -327,11 +329,11 @@ async function buildCommissionsSheet(
   return [headers, ...rows];
 }
 
-// ─── الدالة الرئيسية للتصدير ──────────────────────────────
+// ─── الدالة الرئيسية للتصدير ─────────────────────────────
 export async function exportToExcel(
   startDate: Date,
   endDate: Date
-): Promise <void> {
+): Promise<void> {
   const categoryMap = await getCategoryMap();
 
   const [

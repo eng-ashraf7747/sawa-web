@@ -1,9 +1,10 @@
 // C:\sawa-web\hooks\usePoints.ts
+
 "use client";
 import { useState, useEffect, useMemo } from "react";
-import { collection, onSnapshot, query, where, orderBy, limit } from "firebase/firestore";
+import { collection, onSnapshot, query, orderBy, limit } from "firebase/firestore";
 import { db } from "@/lib/firebase";
-import { PointsLedgerEntry, ANALYTICS_COLLECTIONS } from "@/types/analytics";
+import { UserPointsLedgerEntry, POINTS_LEDGER_SUBCOLLECTION } from "@/types/analytics";
 
 interface PointsSummary {
   signupBonus: number;
@@ -38,7 +39,7 @@ const defaultSummary: PointsSummary = {
 };
 
 export const usePoints = (uid: string | undefined): UsePointsReturn => {
-  const [entries, setEntries] = useState<PointsLedgerEntry[]>([]);
+  const [entries, setEntries] = useState<UserPointsLedgerEntry[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -48,13 +49,10 @@ export const usePoints = (uid: string | undefined): UsePointsReturn => {
       return;
     }
 
-    const ledgerRef = collection(db, ANALYTICS_COLLECTIONS.POINTS_LEDGER);
-    const q = query(
-      ledgerRef,
-      where("userId", "==", uid),
-      orderBy("createdAt", "desc"),
-      limit(500) // حد معقول للأداء
-    );
+    // قراءة مباشرة من دفتر نقاط المستخدم — نفس المسار اللي الدوال السحابية
+    // (onUserRegistered.ts, onFirstLogin.ts) بتكتب فيه فعليًا: users/{uid}/pointsLedger
+    const ledgerRef = collection(db, "users", uid, POINTS_LEDGER_SUBCOLLECTION);
+    const q = query(ledgerRef, orderBy("timestamp", "desc"), limit(500));
 
     const unsubscribe = onSnapshot(
       q,
@@ -62,7 +60,7 @@ export const usePoints = (uid: string | undefined): UsePointsReturn => {
         const loadedEntries = snapshot.docs.map((d) => ({
           id: d.id,
           ...d.data(),
-        } as PointsLedgerEntry));
+        } as UserPointsLedgerEntry));
         setEntries(loadedEntries);
         setLoading(false);
       },
@@ -76,44 +74,28 @@ export const usePoints = (uid: string | undefined): UsePointsReturn => {
     return () => unsubscribe();
   }, [uid]);
 
-  // حساب الـ Summary بطريقة أكثر شمولاً
   const summary = useMemo(() => {
     const newSummary: PointsSummary = { ...defaultSummary };
 
     entries.forEach((entry) => {
-      const points = entry.points;
-
-      if (entry.type === "earned") {
-        switch (entry.source) {
-          case "registration":
-            newSummary.signupBonus += points;
-            break;
-          case "referral_sent":
-            newSummary.referralOwner += points;
-            break;
-          case "referral_received":
-            newSummary.referralJoiner += points;
-            break;
-          case "transaction_completed":
-            newSummary.transaction += points;
-            break;
-          case "review_submitted":
-            newSummary.review += points;
-            break;
-          case "admin_grant":
-            newSummary.adminGrant += points;
-            break;
-        }
-      } else if (entry.type === "redeemed") {
-        if (entry.source === "subscription_redeemed") {
-          newSummary.subscriptionPayment += Math.abs(points);
-        }
-      } else if (entry.type === "expired") {
-        newSummary.expired += Math.abs(points);
+      switch (entry.type) {
+        case "signup_bonus":
+          newSummary.signupBonus += entry.points;
+          break;
+        case "referral_owner_bonus":
+          newSummary.referralOwner += entry.points;
+          break;
+        case "referral_joiner_bonus":
+          newSummary.referralJoiner += entry.points;
+          break;
+        case "admin_adjustment":
+          // ملاحظة: لا توجد أي بيانات حقيقية من هذا النوع حاليًا لاختبارها،
+          // ولا يوجد بعد تصميم واجهة لعرض تعديل سالب — القيمة تُجمع كما هي
+          newSummary.adminGrant += entry.points;
+          break;
       }
     });
 
-    // Total calculation
     newSummary.total =
       newSummary.signupBonus +
       newSummary.referralOwner +

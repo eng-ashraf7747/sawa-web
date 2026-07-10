@@ -21,7 +21,6 @@ import {
   captureTrafficSource,
   getSavedSource,
 } from "@/lib/analytics";
-import { addPointsEntry } from "@/lib/pointsLedger";
 
 const googleProvider = new GoogleAuthProvider();
 
@@ -106,16 +105,6 @@ export const registerWithEmail = async (
   await sendEmailVerification(credential.user);
   await saveNewEmailUser(credential.user, { displayName, phone, referralCode });
 
-  await addPointsEntry({
-    userId: credential.user.uid,
-    type: "earned",
-    source: "registration",
-    points: SIGNUP_BONUS_POINTS,
-    currentBalance: 0,
-    relatedEntityId: null,
-    relatedEntityType: null,
-  });
-
   await trackEvent({
     eventType: "user_registered",
     userId: credential.user.uid,
@@ -138,22 +127,12 @@ export const registerWithEmail = async (
   return credential;
 };
 
-// ─── Google Sign-In ───────────────────────────────────────────
+// ─── Google Sign-In ─────────────────────────────────────────────
 export const loginWithGoogle = async () => {
   captureTrafficSource();
 
   const credential = await signInWithPopup(auth, googleProvider);
   await saveGoogleUser(credential.user);
-
-  await addPointsEntry({
-    userId: credential.user.uid,
-    type: "earned",
-    source: "registration",
-    points: SIGNUP_BONUS_POINTS,
-    currentBalance: 0,
-    relatedEntityId: null,
-    relatedEntityType: null,
-  });
 
   await trackEvent({
     eventType: "user_logged_in",
@@ -165,9 +144,11 @@ export const loginWithGoogle = async () => {
   return credential;
 };
 
-// ─── Forgot Password ──────────────────────────────────────────
+// ─── Logout ───────────────────────────────────────────────────
+export const logout = async () => {
+  await signOut(auth);
+};
+
+// ─── إعادة تعيين كلمة المرور ──────────────────────────────────
 export const forgotPassword = (email: string) =>
   sendPasswordResetEmail(auth, email);
-
-// ─── Logout ───────────────────────────────────────────────────
-export const logout = () => signOut(auth);

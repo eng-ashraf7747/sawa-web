@@ -85,17 +85,6 @@ export type EventType =
   | RequestEventType
   | VendorEventType;
 
-// ─── مصادر النقاط ────────────────────────────────────────
-export type PointsSource =
-  | "registration"
-  | "referral_sent"
-  | "referral_received"
-  | "transaction_completed"
-  | "review_submitted"
-  | "admin_grant"
-  | "subscription_redeemed"
-  | "expired";
-
 // ─── نوع الحدث الكامل ────────────────────────────────────
 export interface AnalyticsEvent {
   id: string;
@@ -116,21 +105,28 @@ export interface AnalyticsEvent {
   version?: string;
 }
 
-// ─── نوع سطر دفتر النقاط ────────────────────────────────
-export interface PointsLedgerEntry {
+// ─── نوع سطر دفتر النقاط (Subcollection) ────────────────────────────────
+// هذا هو الشكل الحقيقي المكتوب فعليًا بواسطة الدوال السحابية
+// (onUserRegistered.ts, onFirstLogin.ts) تحت المسار: users/{uid}/pointsLedger
+// وهو المصدر الوحيد المعتمد لتاريخ النقاط — لا يوجد نظام مواز آخر بعد اليوم.
+export type UserPointsLedgerType =
+  | "signup_bonus"
+  | "referral_joiner_bonus"
+  | "referral_owner_bonus"
+  | "admin_adjustment";
+
+export interface UserPointsLedgerEntry {
   id: string;
-  userId: string;
-  type: "earned" | "redeemed" | "expired";
-  source: PointsSource;
+  type: UserPointsLedgerType;
   points: number;
-  monetaryValue: number;
-  balanceBefore: number;
-  balanceAfter: number;
-  relatedEntityId: string | null;
-  relatedEntityType: "booking" | "referral" | "subscription" | "admin" | null;
-  expiryDate: Date | null;
-  createdAt: Date;
+  note: string;
+  timestamp: Date;
+  referredUser?: string | null;
 }
+
+// اسم الـ Subcollection كما هو مكتوب فعليًا في الدوال السحابية (COLLECTIONS.POINTS_LEDGER
+// في functions/src/config/referralConfig.ts) — مصدر واحد للحقيقة، القيمة يجب أن تبقى مطابقة له دومًا
+export const POINTS_LEDGER_SUBCOLLECTION = "pointsLedger";
 
 // ─── Input لتسجيل حدث ────────────────────────────────────
 export interface TrackEventInput {
@@ -146,24 +142,10 @@ export interface TrackEventInput {
   metadata?: Record<string, unknown>;
 }
 
-// ─── Input لإضافة سطر نقاط ───────────────────────────────
-export interface AddPointsEntryInput {
-  userId: string;
-  type: "earned" | "redeemed" | "expired";
-  source: PointsSource;
-  points: number;
-  currentBalance: number;
-  relatedEntityId?: string | null;
-  relatedEntityType?: PointsLedgerEntry["relatedEntityType"];
-  expiryDate?: Date | null;
-}
-
 // ─── ثوابت ───────────────────────────────────────────────
-export const POINTS_MONETARY_VALUE = 0.5;
 export const POINTS_PER_SUBSCRIPTION = 100;
 export const SUBSCRIPTION_VALUE_EGP = 50;
 
 export const ANALYTICS_COLLECTIONS = {
   EVENTS: "analytics_events",
-  POINTS_LEDGER: "points_ledger",
 } as const;
