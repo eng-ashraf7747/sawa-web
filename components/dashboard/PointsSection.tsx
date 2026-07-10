@@ -1,7 +1,7 @@
 // C:\sawa-web\components\dashboard\PointsSection.tsx
 
 "use client";
-import { useState, useEffect } from "react";
+import { useState, useEffect, memo } from "react";
 import { getFunctions, httpsCallable } from "firebase/functions";
 import { User } from "@/types";
 import { usePoints } from "@/hooks/usePoints";
@@ -18,8 +18,33 @@ const referralStatusConfig = {
   rejected: { label: "مرفوض", color: "#dc2626", bg: "#fee2e2" },
 };
 
+const PointsRow = memo(function PointsRow({
+  icon,
+  label,
+  points,
+  positive,
+}: {
+  icon: string;
+  label: string;
+  points: number;
+  positive: boolean;
+}) {
+  if (points === 0) return null;
+  return (
+    <div className="flex items-center justify-between px-6 py-4 hover:bg-[#f8fafc] transition-colors">
+      <div className="flex items-center gap-3">
+        <span className="text-xl">{icon}</span>
+        <span className="text-[#374151] text-sm font-medium">{label}</span>
+      </div>
+      <span className="text-base font-extrabold" style={{ color: positive ? "#16a34a" : "#dc2626" }}>
+        {positive ? "+" : "-"}{points}
+      </span>
+    </div>
+  );
+});
+
 export default function PointsSection({ userData }: PointsSectionProps) {
-  const { summary, loading } = usePoints(userData?.uid);
+  const { summary, loading, error } = usePoints(userData?.uid);
   const [copied, setCopied] = useState(false);
   const [requesting, setRequesting] = useState(false);
   const [requestMsg, setRequestMsg] = useState<{ type: "success" | "error"; text: string } | null>(null);
@@ -30,24 +55,22 @@ export default function PointsSection({ userData }: PointsSectionProps) {
   const referralStatus = referralStatusConfig[userData?.referralStatus ?? "expired"];
 
   // ─── حساب حالة الزر ─────────────────────────────
+  // ملاحظة: صيغة الشهر بدون تبطين بالصفر (2026-7 مش 2026-07) — مطابقة عمدًا
+  // لنفس الصيغة اللي الدالة السحابية onReferralRequest بتخزنها فعليًا
   const now = new Date();
   const currentMonth = `${now.getFullYear()}-${now.getMonth() + 1}`;
   const requestCount = userData?.referralRequestMonth === currentMonth
     ? (userData?.referralRequestCount ?? 0)
     : 0;
   const remainingRequests = 3 - requestCount;
-
   const canRequest = userData?.referralStatus !== "active" && remainingRequests > 0;
 
-  const getDisabledReason = () => {
-    if (userData?.referralStatus === "active") return "يوجد كود فعال حالياً";
-    if (remainingRequests <= 0) return "تم استهلاك عدد الطلبات المتاحة شهرياً";
-    return null;
-  };
+  const disabledReason = userData?.referralStatus === "active"
+    ? "يوجد كود فعال حالياً"
+    : remainingRequests <= 0
+    ? "تم استهلاك عدد الطلبات المتاحة شهرياً"
+    : null;
 
-  const disabledReason = getDisabledReason();
-
-  // ─── نسخ الكود ─────────────────────────────
   const handleCopy = async () => {
     if (!userData?.referralCode) return;
     await navigator.clipboard.writeText(userData.referralCode);
@@ -55,7 +78,6 @@ export default function PointsSection({ userData }: PointsSectionProps) {
     setTimeout(() => setCopied(false), 2000);
   };
 
-  // ─── طلب كود جديد ─────────────────────────────
   const handleRequestCode = async () => {
     if (!canRequest || requesting) return;
     setRequesting(true);
@@ -73,7 +95,6 @@ export default function PointsSection({ userData }: PointsSectionProps) {
     }
   };
 
-  // ─── مسح رسالة النتيجة تلقائيًا بعد 5 ثواني ─────────────────────────────
   useEffect(() => {
     if (requestMsg) {
       const timer = setTimeout(() => setRequestMsg(null), 5000);
@@ -81,7 +102,6 @@ export default function PointsSection({ userData }: PointsSectionProps) {
     }
   }, [requestMsg]);
 
-  // ─── تاريخ انتهاء الكود ─────────────────────────────
   const getExpiryText = () => {
     if (!userData?.referralActivatedAt) return "";
     const raw = userData.referralActivatedAt as unknown as { toDate?: () => Date } | Date;
@@ -98,6 +118,9 @@ export default function PointsSection({ userData }: PointsSectionProps) {
     summary.signupBonus > 0 ||
     summary.referralOwner > 0 ||
     summary.referralJoiner > 0 ||
+    summary.transaction > 0 ||
+    summary.review > 0 ||
+    summary.adminGrant > 0 ||
     summary.carryOver > 0;
 
   if (loading) {
@@ -106,6 +129,10 @@ export default function PointsSection({ userData }: PointsSectionProps) {
         <div className="w-10 h-10 border-4 border-[#1a3c6e] border-t-[#c9a84c] rounded-full animate-spin" />
       </div>
     );
+  }
+
+  if (error) {
+    return <div className="text-red-500 text-center py-8">{error}</div>;
   }
 
   return (
@@ -156,6 +183,9 @@ export default function PointsSection({ userData }: PointsSectionProps) {
                 <PointsRow icon="🎁" label="مكافأة التسجيل" points={summary.signupBonus} positive />
                 <PointsRow icon="👥" label="مشاركة كودك مع الآخرين" points={summary.referralOwner} positive />
                 <PointsRow icon="🎟️" label="انضممت بكود صديق" points={summary.referralJoiner} positive />
+                <PointsRow icon="🛒" label="من معاملاتك على المنصة" points={summary.transaction} positive />
+                <PointsRow icon="⭐" label="من تقييماتك" points={summary.review} positive />
+                <PointsRow icon="🎯" label="منحة إدارية" points={summary.adminGrant} positive />
                 <PointsRow icon="📦" label="من الشهور السابقة" points={summary.carryOver} positive />
               </>
             ) : (
@@ -184,19 +214,14 @@ export default function PointsSection({ userData }: PointsSectionProps) {
         </div>
         <div className="p-6 flex flex-col gap-4">
 
-          {/* الكود والحالة */}
           <div className="flex items-center justify-between gap-4">
             <div className="flex flex-col gap-1">
               <span className="text-3xl font-extrabold tracking-widest"
-                style={{
-                  color: userData?.referralStatus === "active" ? "#1a3c6e" : "#9ca3af",
-                  letterSpacing: "0.3em",
-                }}>
+                style={{ color: userData?.referralStatus === "active" ? "#1a3c6e" : "#9ca3af", letterSpacing: "0.3em" }}>
                 {userData?.referralCode ?? "——"}
               </span>
               <div className="flex items-center gap-2 flex-wrap">
-                <span className="text-xs font-semibold px-2 py-0.5 rounded-full"
-                  style={{ color: referralStatus.color, backgroundColor: referralStatus.bg }}>
+                <span className="text-xs font-semibold px-2 py-0.5 rounded-full" style={{ color: referralStatus.color, backgroundColor: referralStatus.bg }}>
                   {referralStatus.label}
                 </span>
                 {userData?.referralStatus === "active" && (
@@ -205,37 +230,26 @@ export default function PointsSection({ userData }: PointsSectionProps) {
               </div>
             </div>
             <div className="flex flex-col items-center gap-1">
-              <span className="text-2xl font-bold text-[#1a3c6e]">
-                {userData?.referralUsageCount ?? 0}
-              </span>
+              <span className="text-2xl font-bold text-[#1a3c6e]">{userData?.referralUsageCount ?? 0}</span>
               <span className="text-xs text-[#6b7280]">مرة استُخدم</span>
             </div>
           </div>
 
-          {/* الأزرار */}
           <div className="flex flex-col gap-3">
             {userData?.referralStatus === "active" && (
               <button onClick={handleCopy}
                 className="w-full flex items-center justify-center gap-2 py-3 rounded-xl font-bold text-sm transition-all duration-200"
-                style={{
-                  backgroundColor: copied ? "#dcfce7" : "#1a3c6e",
-                  color: copied ? "#16a34a" : "white",
-                }}>
+                style={{ backgroundColor: copied ? "#dcfce7" : "#1a3c6e", color: copied ? "#16a34a" : "white" }}>
                 {copied ? "✓ تم النسخ" : "📋 نسخ الكود"}
               </button>
             )}
 
-            {/* زر طلب كود جديد */}
             <div className="flex flex-col gap-2">
               <button
                 onClick={handleRequestCode}
                 disabled={!canRequest || requesting}
-                className="w-full flex items-center justify-center gap-2 py-3 rounded-xl font-bold text-sm transition-all duration-200"
-                style={{
-                  backgroundColor: canRequest ? "#16a34a" : "#e5e7eb",
-                  color: canRequest ? "white" : "#9ca3af",
-                  cursor: canRequest ? "pointer" : "not-allowed",
-                }}>
+                className="w-full flex items-center justify-center gap-2 py-3 rounded-xl font-bold text-sm transition-all duration-200 disabled:cursor-not-allowed"
+                style={{ backgroundColor: canRequest ? "#16a34a" : "#e5e7eb", color: canRequest ? "white" : "#9ca3af" }}>
                 {requesting ? (
                   <><div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" /> جاري التفعيل...</>
                 ) : (
@@ -243,25 +257,15 @@ export default function PointsSection({ userData }: PointsSectionProps) {
                 )}
               </button>
 
-              {/* سبب التعطيل */}
-              {disabledReason && (
-                <p className="text-xs text-center text-[#9ca3af]">{disabledReason}</p>
-              )}
-
-              {/* عدد الطلبات المتبقية */}
+              {disabledReason && <p className="text-xs text-center text-[#9ca3af]">{disabledReason}</p>}
               {canRequest && (
                 <p className="text-xs text-center text-[#6b7280]">
                   متبقي لك <span className="font-bold text-[#1a3c6e]">{remainingRequests}</span> طلب من أصل 3 هذا الشهر
                 </p>
               )}
-
-              {/* رسالة النتيجة */}
               {requestMsg && (
                 <div className="flex items-center justify-center gap-2 py-2 px-4 rounded-xl text-sm font-semibold"
-                  style={{
-                    backgroundColor: requestMsg.type === "success" ? "#dcfce7" : "#fee2e2",
-                    color: requestMsg.type === "success" ? "#16a34a" : "#dc2626",
-                  }}>
+                  style={{ backgroundColor: requestMsg.type === "success" ? "#dcfce7" : "#fee2e2", color: requestMsg.type === "success" ? "#16a34a" : "#dc2626" }}>
                   {requestMsg.text}
                 </div>
               )}
@@ -271,24 +275,6 @@ export default function PointsSection({ userData }: PointsSectionProps) {
         </div>
       </div>
 
-    </div>
-  );
-}
-
-// ─── مكون صف النقاط ─────────────────────────────
-function PointsRow({ icon, label, points, positive }: {
-  icon: string; label: string; points: number; positive: boolean;
-}) {
-  if (points === 0) return null;
-  return (
-    <div className="flex items-center justify-between px-6 py-4 hover:bg-[#f8fafc] transition-colors">
-      <div className="flex items-center gap-3">
-        <span className="text-xl">{icon}</span>
-        <span className="text-[#374151] text-sm font-medium">{label}</span>
-      </div>
-      <span className="text-base font-extrabold" style={{ color: positive ? "#16a34a" : "#dc2626" }}>
-        {positive ? "+" : "-"}{points}
-      </span>
     </div>
   );
 }

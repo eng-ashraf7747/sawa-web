@@ -1,4 +1,5 @@
 // C:\sawa-web\types\analytics.ts
+
 // ─── مصادر الزيارة ────────────────────────────────────────
 export type TrafficSource =
   | "facebook_page"
@@ -112,7 +113,7 @@ export interface AnalyticsEvent {
   value: number | null;
   pointsChange: number | null;
   metadata: Record<string, unknown>;
-  version?: string; // لدعم تغييرات مستقبلية
+  version?: string;
 }
 
 // ─── نوع سطر دفتر النقاط ────────────────────────────────
@@ -164,5 +165,5 @@ export const SUBSCRIPTION_VALUE_EGP = 50;
 
 export const ANALYTICS_COLLECTIONS = {
   EVENTS: "analytics_events",
-  POINTS_LEDGER: "pointsLedger",
+  POINTS_LEDGER: "points_ledger",
 } as const;

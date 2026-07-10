@@ -26,26 +26,6 @@ export interface User {
   updatedAt: Date;
 }
 
-export interface PointsLedgerEntry {
-  id: string;
-  userId: string;
-  type:
-    | "signup_bonus"
-    | "referral_joiner_bonus"
-    | "referral_owner_bonus"
-    | "admin_adjustment"
-    | "subscription_payment";
-  points: number;
-  monetaryValue: number;
-  balanceBefore: number;
-  balanceAfter: number;
-  relatedEntityId: string | null;
-  relatedEntityType: string | null;
-  expiryDate: Date | null;
-  note: string;
-  createdAt: Date;
-}
-
 export interface City {
   id: string;
   name: string;
