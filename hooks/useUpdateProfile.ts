@@ -3,13 +3,17 @@
 "use client";
 
 import { useState, useCallback } from "react";
+import { updateProfile as updateFirebaseAuthProfile } from "firebase/auth";
+import { auth } from "@/lib/firebase";
 import { useUser } from "@/hooks/useUser";
 import { updateUserProfile } from "@/lib/users";
 import { uploadImage, deleteImage } from "@/lib/storage";
+import { resizeImage } from "@/lib/imageResize";
 import {
   UpdateUserProfileInput,
   validateProfileInput,
-  validateProfileImage,
+  validateSourceImage,
+  validateUploadImageSize,
 } from "@/lib/profileValidation";
 import { useAsyncAction } from "@/hooks/useAsyncAction";
 
@@ -45,26 +49,31 @@ export function useUpdateProfile(): UseUpdateProfileReturn {
       let uploadedNewPhoto = false;
 
       if (input.photoFile) {
-        const imageError = validateProfileImage(input.photoFile);
-        if (imageError) {
-          throw new Error(imageError);
+        const sourceImageError = validateSourceImage(input.photoFile);
+        if (sourceImageError) {
+          throw new Error(sourceImageError);
         }
 
         setUploading(true);
         setProgress(0);
 
         try {
-          const timestamp = Date.now();
-          const safeFileName = input.photoFile.name.replace(/[^a-zA-Z0-9.-]/g, "_");
-          const path = `profile-images/${userData.uid}/${timestamp}-${safeFileName}`;
+          const resizedBlob = await resizeImage(input.photoFile);
 
-          photoURL = await uploadImage(input.photoFile, path, (prog) =>
+          const uploadSizeError = validateUploadImageSize(resizedBlob);
+          if (uploadSizeError) {
+            throw new Error(uploadSizeError);
+          }
+
+          const newPhotoPath = `profile-images/${userData.uid}/${Date.now()}.jpg`;
+          photoURL = await uploadImage(resizedBlob, newPhotoPath, (prog) =>
             setProgress(Math.round(prog))
           );
           uploadedNewPhoto = true;
         } catch (uploadErr) {
           console.error("Image upload failed:", uploadErr);
-          throw new Error("فشل رفع الصورة. تأكد من حجم الملف (≤ 2MB) وحاول مرة أخرى.");
+          const message = uploadErr instanceof Error ? uploadErr.message : "فشل رفع الصورة، حاول مرة أخرى";
+          throw new Error(message);
         } finally {
           setUploading(false);
           setProgress(0);
@@ -81,6 +90,8 @@ export function useUpdateProfile(): UseUpdateProfileReturn {
         photoURL,
       };
 
+      // ملاحظة معمارية مهمة: run() من useAsyncAction يبتلع الأخطاء داخليًا (لا يرمي تاني) —
+      // العلم succeeded هو الطريقة الصحيحة الوحيدة لمعرفة نجاح الكتابة فعليًا من هنا
       let succeeded = false;
 
       await run(async () => {
@@ -88,14 +99,31 @@ export function useUpdateProfile(): UseUpdateProfileReturn {
         succeeded = true;
       });
 
-      // تنظيف الصورة القديمة من Storage بعد نجاح الحفظ فقط، وبشكل غير حاجب (best-effort)
-      if (succeeded && uploadedNewPhoto && previousPhotoURL) {
-        deleteImage(previousPhotoURL).catch(() => {
-          // فشل حذف الصورة القديمة مش لازم يكسر تجربة المستخدم أو يظهر كخطأ له
+      if (!succeeded) {
+        // Rollback: الكتابة فشلت — نمسح الصورة الجديدة اللي اترفعت لمنع تراكم ملفات يتيمة،
+        // والصورة القديمة تفضل زي ما هي لأننا ما لمسناهاش خالص
+        if (uploadedNewPhoto && photoURL) {
+          deleteImage(photoURL).catch(() => {});
+        }
+        return false;
+      }
+
+      // مزامنة Firebase Auth (غير حاجبة — فشلها لا يوقف نجاح الحفظ الأساسي في Firestore)
+      if (auth.currentUser) {
+        updateFirebaseAuthProfile(auth.currentUser, {
+          displayName: safeUpdateData.displayName,
+          photoURL: safeUpdateData.photoURL ?? undefined,
+        }).catch((authSyncError) => {
+          console.warn("Firebase Auth profile sync failed:", authSyncError);
         });
       }
 
-      return succeeded;
+      // تنظيف الصورة القديمة بعد نجاح كل شيء، وبس لو فيه صورة جديدة اتحفظت فعلاً
+      if (uploadedNewPhoto && previousPhotoURL) {
+        deleteImage(previousPhotoURL).catch(() => {});
+      }
+
+      return true;
     },
     [userData, run]
   );
