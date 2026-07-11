@@ -1,10 +1,11 @@
 // C:\sawa-web\components\dashboard\CategoryDealsView.tsx
 "use client";
 
-import { useState, useEffect, useCallback, useMemo } from "react";
+import { useState, useEffect, useCallback, useMemo, memo } from "react";
 import { useActiveDeals } from "@/hooks/useDeals";
 import { useActiveCategories } from "@/hooks/useCategories";
 import { useVendorProfile } from "@/hooks/useVendorProfile";
+import { useProductRating } from "@/hooks/useBookingReviews";
 import { useUser } from "@/hooks/useUser";
 import { useUserBookings } from "@/hooks/useBookings";
 import { Deal } from "@/types/deal";
@@ -18,14 +19,51 @@ interface DealCardProps {
   deal: Deal;
   userId: string | null;
   categoryId: string;
-  cooldownUntil: Date | null;
+  // رقمي (timestamp) وليس Date عمداً — عشان يفضل مستقر مرجعياً (Reference-Stable)
+  // ويخلي React.memo على DealCard فعّالة فعلاً حتى للكروت اللي عندها cooldown نشط
+  cooldownUntil: number | null;
   onVendorClick: (vendorId: string, vendorName: string) => void;
   onBookClick: (deal: Deal) => void;
 }
 
-const DealCard = ({ deal, userId, categoryId, cooldownUntil, onVendorClick, onBookClick }: DealCardProps) => {
-  const [now, setNow] = useState(() => new Date());
+/**
+ * سطر عرض تقييم السلعة (PRC-RVW-04)
+ * ⭐ المتوسط (عدد المقيّمين) — أو "جديد" لو أقل من الحد الأدنى المطلوب
+ * لا يُعرض أي شيء أثناء التحميل الأول تفادياً لومضة "جديد" قبل ظهور الرقم الفعلي
+ *
+ * مُغلَّف بـ memo لأن الـ prop الوحيدة (dealId) نص بسيط مستقر
+ */
+const ProductRatingLine = memo(({ dealId }: { dealId: string }) => {
+  const { average, count, loading, load } = useProductRating(dealId);
 
+  useEffect(() => {
+    load();
+  }, [load]);
+
+  if (loading) return null;
+
+  if (average === null) {
+    return <p className="text-xs text-slate-400 mb-2">جديد</p>;
+  }
+
+  return (
+    <p className="flex items-center gap-1 text-xs mb-2">
+      <span className="text-[#c9a84c]">⭐</span>
+      <span className="font-bold text-[#1a1a2e]">{average.toFixed(1)}</span>
+      <span className="text-slate-400">({count})</span>
+    </p>
+  );
+});
+ProductRatingLine.displayName = "ProductRatingLine";
+
+/**
+ * DealCard مُغلَّف بـ memo — فعّالة الآن بالكامل لأن كل الـ props (بما فيها
+ * cooldownUntil الرقمية) مستقرة مرجعياً بين إعادات الرسم غير ذات الصلة
+ */
+const DealCard = memo(({ deal, userId, categoryId, cooldownUntil, onVendorClick, onBookClick }: DealCardProps) => {
+  const [now, setNow] = useState(() => Date.now());
+
+  // تسجيل مشاهدة العرض (مرة واحدة لكل صفقة)
   useEffect(() => {
     trackEvent({
       eventType: "offer_viewed",
@@ -36,19 +74,19 @@ const DealCard = ({ deal, userId, categoryId, cooldownUntil, onVendorClick, onBo
     });
   }, [deal.id, userId, categoryId]);
 
-  // تحديث الوقت
+  // تحديث الوقت أثناء فترة الانتظار (Cooldown)
   useEffect(() => {
     if (!cooldownUntil) return;
-    const timer = setInterval(() => setNow(new Date()), 30000);
+    const timer = setInterval(() => setNow(Date.now()), 30000);
     return () => clearInterval(timer);
   }, [cooldownUntil]);
 
-  const isOnCooldown = cooldownUntil ? cooldownUntil.getTime() > now.getTime() : false;
+  const isOnCooldown = cooldownUntil ? cooldownUntil > now : false;
   const minutesLeft = isOnCooldown && cooldownUntil
-    ? Math.max(1, Math.ceil((cooldownUntil.getTime() - now.getTime()) / 60000))
+    ? Math.max(1, Math.ceil((cooldownUntil - now) / 60000))
     : 0;
 
-  const handleBookClick = () => {
+  const handleBookClick = useCallback(() => {
     if (isOnCooldown) return;
     trackEvent({
       eventType: "offer_requested",
@@ -58,7 +96,7 @@ const DealCard = ({ deal, userId, categoryId, cooldownUntil, onVendorClick, onBo
       metadata: { dealTitle: deal.title, vendorId: deal.vendorId ?? null },
     });
     onBookClick(deal);
-  };
+  }, [isOnCooldown, userId, deal, categoryId, onBookClick]);
 
   return (
     <div className="bg-white rounded-2xl border border-[#e8eaed] shadow-sm hover:shadow-md hover:border-[#c9a84c] transition-all duration-200 overflow-hidden group flex flex-col">
@@ -78,15 +116,18 @@ const DealCard = ({ deal, userId, categoryId, cooldownUntil, onVendorClick, onBo
 
       <div className="p-4 flex flex-col flex-1">
         <h3 className="text-[#1a1a2e] font-bold text-sm mb-1 line-clamp-2">{deal.title}</h3>
+        <ProductRatingLine dealId={deal.id} />
         <p className="text-slate-500 text-xs mb-3 line-clamp-2">{deal.description}</p>
         <p className="text-[#c9a84c] text-xl font-extrabold mb-4">{deal.discount}</p>
 
         <div className="flex gap-2 mt-auto">
           {deal.externalUrl && (
             <a
+            
               href={deal.externalUrl}
               target="_blank"
               rel="noopener noreferrer"
+              aria-label={`تفاصيل ${deal.title}`}
               className="flex-1 py-2 border border-[#1a3c6e] text-[#1a3c6e] rounded-xl text-xs font-bold text-center hover:bg-[#1a3c6e] hover:text-white transition-all duration-200"
             >
               التفاصيل
@@ -115,6 +156,7 @@ const DealCard = ({ deal, userId, categoryId, cooldownUntil, onVendorClick, onBo
           </div>
           <button
             onClick={() => onVendorClick(deal.vendorId!, deal.vendorName!)}
+            aria-label={`تفاصيل المورد ${deal.vendorName}`}
             className="text-[10px] font-bold text-[#1a3c6e] hover:text-[#c9a84c] transition-colors flex-shrink-0"
           >
             تفاصيل المورد
@@ -123,7 +165,8 @@ const DealCard = ({ deal, userId, categoryId, cooldownUntil, onVendorClick, onBo
       )}
     </div>
   );
-};
+});
+DealCard.displayName = "DealCard";
 
 function BookingWrapper({ deal, onClose, onBooked }: {
   deal: Deal;
@@ -193,17 +236,21 @@ export default function CategoryDealsView({ categoryId, onBack }: CategoryDealsV
     setRecentBookingTimes(map);
   }, [bookings]);
 
-  const getCooldownUntil = useCallback((dealId: string): Date | null => {
+  const getCooldownUntil = useCallback((dealId: string): number | null => {
     const last = recentBookingTimes[dealId];
     if (!last) return null;
-    const until = new Date(last.getTime() + COOLDOWN_MS);
-    return until.getTime() > Date.now() ? until : null;
+    const until = last.getTime() + COOLDOWN_MS;
+    return until > Date.now() ? until : null;
   }, [recentBookingTimes]);
 
   const handleBookClick = useCallback((deal: Deal) => {
     if (!userData?.uid || !deal.vendorId) return;
     setBookingDeal(deal);
   }, [userData?.uid]);
+
+  const handleVendorClick = useCallback((vendorId: string, vendorName: string) => {
+    setSelectedVendor({ vendorId, vendorName });
+  }, []);
 
   if (loading) {
     return (
@@ -252,7 +299,7 @@ export default function CategoryDealsView({ categoryId, onBack }: CategoryDealsV
               userId={userData?.uid ?? null}
               categoryId={categoryId}
               cooldownUntil={getCooldownUntil(deal.id)}
-              onVendorClick={(vendorId, vendorName) => setSelectedVendor({ vendorId, vendorName })}
+              onVendorClick={handleVendorClick}
               onBookClick={handleBookClick}
             />
           ))}

@@ -117,3 +117,28 @@ export const POINTS_PER_EGP = 0;
 export const MAX_COMMISSION_PER_BOOKING = 50;
 export const MIN_OPERATIONS_FOR_RATING = 5;
 export const BOOKING_CANCEL_HOURS = 48;
+
+// ==========================================
+// PRC-RVW-04 — حساب متوسط التقييم (دالة نقية)
+// ==========================================
+
+/**
+ * حساب متوسط التقييم وعدد المقيّمين من مصفوفة تقييمات خام
+ * يُرجع null إذا كان عدد التقييمات أقل من الحد الأدنى المطلوب لعرض نتيجة موثوقة
+ *
+ * موضوعة هنا عمداً (وليس في lib/bookings.ts أو ملف جديد منفصل):
+ * هذا الملف صفر استيرادات (لا يستورد Firebase أو أي شيء آخر)، وهو أصلاً
+ * البيت الحالي لكل ثوابت وأنواع التقييمات (ReviewType, BookingReview,
+ * MIN_OPERATIONS_FOR_RATING) — إضافة الدالة هنا تفادت مشكلة حقيقية:
+ * وضعها سابقاً داخل lib/bookings.ts كان يجرّ عند الاختبار تحميل
+ * lib/firebase.ts (عبر استيراد db) وبالتالي firebase/auth، التي تحتاج
+ * fetch غير المتاح في بيئة Jest — النتيجة: فشل تشغيل ملف الاختبار بالكامل.
+ */
+export function calculateRatingAverage(
+  ratings: number[],
+  minCount: number = MIN_OPERATIONS_FOR_RATING
+): { average: number; count: number } | null {
+  if (ratings.length < minCount) return null;
+  const total = ratings.reduce((sum, r) => sum + (r ?? 0), 0);
+  return { average: total / ratings.length, count: ratings.length };
+}

@@ -26,6 +26,8 @@ import {
   COMMISSION_RATE,
   POINTS_PER_EGP,
   MAX_COMMISSION_PER_BOOKING,
+  MIN_OPERATIONS_FOR_RATING,
+  calculateRatingAverage,
 } from "@/types/booking";
 import { trackEvent } from "@/lib/analytics";
 
@@ -120,13 +122,28 @@ export async function markDelivered(
   input: DeliverBookingInput
 ): Promise <void> {
   try {
+    const bookingRef = doc(db, "bookings", bookingId);
+
+    // التحقق المبكر من وجود الحجز قبل أي تحديث (Fail Fast)
+    // ملاحظة تصميم: لا نستخدم runTransaction هنا عمداً، لأن addCommissionEntry
+    // في lib/commissionLedger.ts تستخدم addDoc عادية (لا تقبل كائن transaction) —
+    // لو استُدعيت من داخل runTransaction وحدث Retry بسبب تعارض، ستُنفَّذ
+    // addCommissionEntry أكثر من مرة فعلياً، ما يعني قيد عمولة مكرر في القاعدة.
+    // التزامن الحقيقي يتطلب أولاً تعديل addCommissionEntry لتقبل transaction،
+    // وهذا قرار منفصل يخص lib/commissionLedger.ts.
+    const bookingSnap = await getDoc(bookingRef);
+    if (!bookingSnap.exists()) {
+      throw new Error("الحجز غير موجود");
+    }
+    const bookingData = bookingSnap.data();
+
     const commission = Math.min(
       input.orderValue * COMMISSION_RATE,
       MAX_COMMISSION_PER_BOOKING
     );
     const vendorPoints = Math.floor(input.orderValue * POINTS_PER_EGP);
 
-    await updateDoc(doc(db, "bookings", bookingId), {
+    await updateDoc(bookingRef, {
       status: "delivered" as BookingStatus,
       orderValue: input.orderValue,
       commission,
@@ -134,20 +151,15 @@ export async function markDelivered(
       deliveredAt: serverTimestamp(),
     });
 
-    // جلب بيانات الحجز لتسجيل العمولة
-    const bookingSnap = await getDoc(doc(db, "bookings", bookingId));
-    if (bookingSnap.exists()) {
-      const bookingData = bookingSnap.data();
-      await addCommissionEntry({
-        bookingId,
-        userId: bookingData.userId ?? "",
-        vendorId: bookingData.vendorId ?? "",
-        categoryId: bookingData.dealCategory ?? "",
-        invoiceValue: input.orderValue,
-        commissionRate: COMMISSION_RATE,
-        commissionCap: MAX_COMMISSION_PER_BOOKING,
-      });
-    }
+    await addCommissionEntry({
+      bookingId,
+      userId: bookingData.userId ?? "",
+      vendorId: bookingData.vendorId ?? "",
+      categoryId: bookingData.dealCategory ?? "",
+      invoiceValue: input.orderValue,
+      commissionRate: COMMISSION_RATE,
+      commissionCap: MAX_COMMISSION_PER_BOOKING,
+    });
 
     await trackEvent({
       eventType: "booking_delivered",
@@ -273,6 +285,7 @@ export async function getVendorReviews(
       where("type", "==", "user_to_vendor"),
       where("approved", "==", true),
       orderBy("createdAt", "desc")
+      // limit(50) // أضف pagination لاحقاً
     );
     const snap = await getDocs(q);
     return snap.docs.map((d) => toBookingReview(d.id, d.data()));
@@ -292,7 +305,7 @@ export async function getVendorRatingAverage(
       where("type", "==", "user_to_vendor")
     );
     const snap = await getDocs(q);
-    if (snap.size < 5) return null;
+    if (snap.size < MIN_OPERATIONS_FOR_RATING) return null;
     const total = snap.docs.reduce(
       (sum, d) => sum + (d.data().rating ?? 0),
       0
@@ -303,13 +316,47 @@ export async function getVendorRatingAverage(
     throw new Error("تعذر حساب متوسط التقييم");
   }
 }
+
+// ==========================================
+// PRC-RVW-04 — تقييم السلعة/الصفقة (user_to_product)
+// ==========================================
+
+/**
+ * جلب متوسط تقييم صفقة/سلعة معينة (PRC-RVW-04)
+ * يعتمد على مجموعة bookingReviews بنفس نمط getVendorRatingAverage تماماً،
+ * لكن بنوع user_to_product وبمعرّف الصفقة (dealId) بدل المورد
+ *
+ * ملاحظة تصميم مقصودة: هذه الدالة مستقلة تماماً عن getVendorRatingAverage
+ * أعلاه (لا تشاركها أي كود) لتفادي أي تعديل على دالة شغالة فعلياً في الإنتاج.
+ * حساب المتوسط نفسه (calculateRatingAverage) مستورد من types/booking.ts —
+ * وليس معرَّفاً هنا — لأنها دالة نقية لا علاقة لها بـ Firestore، ووضعها
+ * هناك يبقيها قابلة للاختبار دون تحميل هذا الملف بأكمله (الذي يستورد db).
+ */
+export async function getProductRatingAverage(
+  dealId: string
+): Promise <{ average: number; count: number } | null> {
+  try {
+    const q = query(
+      collection(db, "bookingReviews"),
+      where("targetId", "==", dealId),
+      where("type", "==", "user_to_product")
+    );
+    const snap = await getDocs(q);
+    const ratings = snap.docs.map((d) => d.data().rating ?? 0);
+    return calculateRatingAverage(ratings);
+  } catch (error) {
+    console.error("getProductRatingAverage error:", error);
+    throw new Error("تعذر حساب متوسط تقييم السلعة");
+  }
+}
+
 // ==========================================
 // دوال فلترة الحجوزات (Client-Side)
 // ==========================================
 
 /**
  * تحويل التاريخ إلى نص بصيغة YYYY-MM-DD بالتوقيت المحلي
- * لتجنب مشكلة التحويل التلقائي لتوقيت جرينشت (UTC)
+ * لتجنب مشكلة التحويل التلقائي لتوقيت جرينتش (UTC)
  */
 export function formatDateToLocal(date: Date | null | undefined): string {
   if (!date || !(date instanceof Date)) return "";
@@ -339,7 +386,7 @@ export function getDefaultDateRange(): { from: string; to: string } {
 function extractLocalDateStr(createdAt: any): string {
   if (!createdAt) return "";
   let date: Date | null = null;
-  
+
   if (createdAt.toDate && typeof createdAt.toDate === "function") {
     date = createdAt.toDate(); // حالة Firestore Timestamp
   } else if (createdAt instanceof Date) {
@@ -347,22 +394,20 @@ function extractLocalDateStr(createdAt: any): string {
   } else if (typeof createdAt === "string") {
     date = new Date(createdAt);
   }
-  
+
   return formatDateToLocal(date);
 }
 
 /**
  * فلترة مصفوفة الحجوزات بناءً على الحالات المحددة والنطاق الزمني
- * ملاحظة: تم استخدام any[] لتجنب أخطاء الترجمة المؤقتة
- * يُرجى استبدالها بنوع Booking[] لاحقاً بعد التأكد من التوافق
  */
 export function filterBookings(
-  bookings: any[],
+  bookings: Booking[],
   selectedStatuses: string[],
   fromDate: string,
   toDate: string
-): any[] {
-  if (!bookings || bookings.length === 0) return [];
+): Booking[] {
+  if (!bookings?.length) return [];
 
   return bookings.filter((booking) => {
     // 1. التحقق من الحالة (لو مفيش حالات محددة، يعرض الكل)
