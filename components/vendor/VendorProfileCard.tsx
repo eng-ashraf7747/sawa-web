@@ -2,8 +2,9 @@
 
 "use client";
 
+import { useEffect } from "react";
 import { useVendorProfile } from "@/hooks/useVendorProfile";
-import { useVendorReviews } from "@/hooks/useVendorReviews";
+import { useVendorRating } from "@/hooks/useBookingReviews";
 
 interface VendorProfileCardProps {
   vendorId: string;
@@ -17,7 +18,11 @@ export default function VendorProfileCard({
   onClose,
 }: VendorProfileCardProps) {
   const { profile, loading } = useVendorProfile(vendorId);
-  const { reviews, averageRating } = useVendorReviews(vendorId);
+  const { average, count, loading: ratingLoading, load } = useVendorRating(vendorId);
+
+  useEffect(() => {
+    load();
+  }, [load]);
 
   return (
     <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/40 backdrop-blur-sm p-0 sm:p-4">
@@ -61,23 +66,29 @@ export default function VendorProfileCard({
                 </div>
               </div>
 
-              {/* ─── Rating ─────────────────────────────── */}
-              {reviews.length > 0 && (
+              {/* ─── Rating (PRC-RVW-02 عبر bookingReviews) ─── */}
+              {!ratingLoading && (
                 <div className="flex items-center gap-2 mb-4 bg-[#f8f9fb] rounded-xl px-4 py-3">
-                  <div className="flex items-center gap-0.5">
-                    {[1, 2, 3, 4, 5].map((star) => (
-                      <svg
-                        key={star}
-                        className={`w-4 h-4 ${star <= Math.round(averageRating) ? "text-[#c9a84c]" : "text-slate-200"}`}
-                        fill="currentColor"
-                        viewBox="0 0 24 24"
-                      >
-                        <path d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.197-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z" />
-                      </svg>
-                    ))}
-                  </div>
-                  <span className="text-sm font-bold text-[#1a3c6e]">{averageRating.toFixed(1)}</span>
-                  <span className="text-xs text-slate-400">({reviews.length} تقييم)</span>
+                  {average !== null ? (
+                    <>
+                      <div className="flex items-center gap-0.5">
+                        {[1, 2, 3, 4, 5].map((star) => (
+                          <svg
+                            key={star}
+                            className={`w-4 h-4 ${star <= Math.round(average) ? "text-[#c9a84c]" : "text-slate-200"}`}
+                            fill="currentColor"
+                            viewBox="0 0 24 24"
+                          >
+                            <path d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.197-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z" />
+                          </svg>
+                        ))}
+                      </div>
+                      <span className="text-sm font-bold text-[#1a3c6e]">{average.toFixed(1)}</span>
+                      <span className="text-xs text-slate-400">({count} تقييم)</span>
+                    </>
+                  ) : (
+                    <span className="text-xs text-slate-400">مورد جديد — لا توجد تقييمات كافية بعد</span>
+                  )}
                 </div>
               )}
 

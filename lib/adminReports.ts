@@ -17,6 +17,7 @@ import {
   BookingRow,
   BookingFilters,
 } from "@/types/adminReports";
+import { calculateRatingAverage } from "@/types/booking";
 
 // ===== نظرة عامة على المنصة =====
 export async function getPlatformOverview(): Promise <PlatformOverview> {
@@ -39,9 +40,10 @@ export async function getPlatformOverview(): Promise <PlatformOverview> {
       )
     );
     const ratings = reviewsSnap.docs.map((d) => d.data().rating ?? 0);
-    const avgRating = ratings.length > 0
-      ? ratings.reduce((a, b) => a + b, 0) / ratings.length
-      : 0;
+    // ملاحظة تصميم: نستخدم calculateRatingAverage بنفس معيار الحد الأدنى (5)
+    // المستخدم في كل مكان آخر بالمشروع — بخلاف السلوك القديم هنا الذي كان
+    // يعرض متوسطاً حتى من تقييم واحد فقط، فيرجع الآن 0 إن لم يتوفر العدد الكافي
+    const avgRating = calculateRatingAverage(ratings)?.average ?? 0;
 
     const usersSnap = await getDocs(
       query(collection(db, "users"), where("role", "==", "user"))
@@ -111,8 +113,10 @@ export async function getVendorBreakdown(): Promise <VendorSummary[]> {
 
     for (const [vendorId, vendor] of vendorMap) {
       const ratings = ratingMap.get(vendorId);
-      if (ratings && ratings.length >= 5) {
-        vendor.avgRating = ratings.reduce((a, b) => a + b, 0) / ratings.length;
+      if (ratings) {
+        // ملاحظة تصميم: نفس دالة calculateRatingAverage الموحّدة بدل حد أدنى
+        // مكتوب يدوياً (كان >= 5 هنا) — لضمان نفس المعيار في كل أنحاء المشروع
+        vendor.avgRating = calculateRatingAverage(ratings)?.average ?? null;
       }
     }
 

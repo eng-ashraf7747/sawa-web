@@ -2,8 +2,9 @@
 
 "use client";
 
+import { useEffect } from "react";
 import { useVendorGuard } from "@/hooks/useVendorGuard";
-import { useVendorReviews } from "@/hooks/useVendorReviews";
+import { useVendorRating } from "@/hooks/useBookingReviews";
 import VendorLayout from "@/components/vendor/VendorLayout";
 
 // ─── Star Rating ───────────────────────────────────────────
@@ -26,7 +27,11 @@ function StarRating({ rating }: { rating: number }) {
 
 export default function VendorReviewsPage() {
   const { isAuthorized, loading: authLoading, vendorId } = useVendorGuard();
-  const { reviews, averageRating, loading } = useVendorReviews(vendorId ?? "");
+  const { reviews, average, count, loading, load } = useVendorRating(vendorId ?? "");
+
+  useEffect(() => {
+    load();
+  }, [load]);
 
   if (authLoading) {
     return (
@@ -46,16 +51,20 @@ export default function VendorReviewsPage() {
         <h2 className="text-base font-bold text-[#0f172a] mb-4">متوسط التقييم</h2>
         {loading ? (
           <div className="h-12 w-40 bg-slate-100 rounded-lg animate-pulse" />
-        ) : (
+        ) : average !== null ? (
           <div className="flex items-center gap-4">
             <span className="text-4xl md:text-5xl font-extrabold text-[#1a3c6e]">
-              {averageRating.toFixed(1)}
+              {average.toFixed(1)}
             </span>
             <div>
-              <StarRating rating={Math.round(averageRating)} />
-              <p className="text-xs text-slate-400 mt-1">{reviews.length} تقييم</p>
+              <StarRating rating={Math.round(average)} />
+              <p className="text-xs text-slate-400 mt-1">{count} تقييم</p>
             </div>
           </div>
+        ) : (
+          <p className="text-sm text-slate-400">
+            لسه معندكش تقييمات كفاية لعرض متوسط موثوق (محتاج 5 تقييمات على الأقل)
+          </p>
         )}
       </div>
 
@@ -85,18 +94,13 @@ export default function VendorReviewsPage() {
                 <div className="flex items-center justify-between mb-2">
                   <StarRating rating={review.rating} />
                   <span className="text-xs text-slate-400">
-                    {review.timestamp
-                      ? new Date(
-                          (review.timestamp as unknown as { seconds: number }).seconds * 1000
-                        ).toLocaleDateString("ar-EG", {
-                          year: "numeric",
-                          month: "short",
-                          day: "numeric",
-                        })
-                      : "—"}
+                    {review.createdAt.toLocaleDateString("ar-EG", {
+                      year: "numeric",
+                      month: "short",
+                      day: "numeric",
+                    })}
                   </span>
                 </div>
-                <p className="text-xs text-slate-500 mb-1">{review.dealTitle}</p>
                 {review.comment && (
                   <p className="text-sm text-slate-700">{review.comment}</p>
                 )}

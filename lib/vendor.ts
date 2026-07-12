@@ -10,10 +10,9 @@ import {
   serverTimestamp,
 } from "firebase/firestore";
 import { db } from "@/lib/firebase";
-import { Transaction, CreateTransactionInput, Review, CreateReviewInput, VendorStats } from "@/types";
+import { Transaction, CreateTransactionInput, VendorStats } from "@/types";
 
 const TRANSACTIONS = "transactions";
-const REVIEWS = "reviews";
 
 // ─── Stream Transactions by Vendor ───────────────────────
 export const streamVendorTransactions = (
@@ -31,27 +30,6 @@ export const streamVendorTransactions = (
     q,
     (snapshot) => {
       callback(snapshot.docs.map((d) => ({ id: d.id, ...d.data() } as Transaction)));
-    },
-    onError
-  );
-};
-
-// ─── Stream Reviews by Vendor ─────────────────────────────
-export const streamVendorReviews = (
-  vendorId: string,
-  callback: (reviews: Review[]) => void,
-  onError: (error: Error) => void
-) => {
-  const q = query(
-    collection(db, REVIEWS),
-    where("vendorId", "==", vendorId),
-    orderBy("timestamp", "desc")
-  );
-
-  return onSnapshot(
-    q,
-    (snapshot) => {
-      callback(snapshot.docs.map((d) => ({ id: d.id, ...d.data() } as Review)));
     },
     onError
   );
@@ -82,15 +60,6 @@ export const calculateVendorStats = (transactions: Transaction[]): VendorStats =
 // ─── Add Transaction ──────────────────────────────────────
 export const addTransaction = async (input: CreateTransactionInput): Promise<string> => {
   const docRef = await addDoc(collection(db, TRANSACTIONS), {
-    ...input,
-    timestamp: serverTimestamp(),
-  });
-  return docRef.id;
-};
-
-// ─── Add Review ───────────────────────────────────────────
-export const addReview = async (input: CreateReviewInput): Promise<string> => {
-  const docRef = await addDoc(collection(db, REVIEWS), {
     ...input,
     timestamp: serverTimestamp(),
   });
