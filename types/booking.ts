@@ -142,3 +142,73 @@ export function calculateRatingAverage(
   const total = ratings.reduce((sum, r) => sum + (r ?? 0), 0);
   return { average: total / ratings.length, count: ratings.length };
 }
+
+// ==========================================
+// تقييم المشترين (vendor_to_user) — صفحة "تقييم المشترين"
+// ==========================================
+
+/**
+ * ملخّص مشترٍ واحد من منظور المورد: كام معاملة معاه، إجمالي قيمة فواتيره،
+ * ومتوسط تقييم المورد له (لو قيّمه من قبل ولو مرة واحدة على الأقل)
+ *
+ * ملاحظة: minCount هنا ليس MIN_OPERATIONS_FOR_RATING — ده معيار خاص
+ * بعرض "تقييم موثوق للجمهور" (5 تقييمات مستقلة من مقيّمين مختلفين).
+ * هنا كل تقييمات نفس المستخدم من نفس المورد، فحتى تقييم واحد يُعرض،
+ * لأنه معلومة داخلية للمورد نفسه فقط، وليست تقييماً عاماً منشوراً.
+ */
+export interface BuyerSummary {
+  userId: string;
+  userName: string;
+  transactionCount: number;
+  totalInvoiceValue: number;
+  averageRating: number | null;
+  ratingCount: number;
+}
+
+/**
+ * تجميع بيانات المشترين من مصدرين مختلفين (حجوزات المورد + تقييماته للمشترين)
+ * دالة نقية بالكامل (لا Firestore) — تُستخدم من lib/bookings.ts بعد جلب البيانات
+ *
+ * @param bookings مصفوفة حجوزات المورد (من getVendorBookings)
+ * @param reviews مصفوفة تقييمات المورد لمشتريه (من getReviewsGivenByVendor)
+ */
+export function buildBuyerSummaries(
+  bookings: { userId: string; userName: string; orderValue: number | null }[],
+  reviews: { targetId: string; rating: number }[]
+): BuyerSummary[] {
+  const map = new Map<string, BuyerSummary>();
+
+  for (const b of bookings) {
+    if (!b.userId) continue;
+    const existing = map.get(b.userId);
+    if (existing) {
+      existing.transactionCount += 1;
+      existing.totalInvoiceValue += b.orderValue ?? 0;
+    } else {
+      map.set(b.userId, {
+        userId: b.userId,
+        userName: b.userName,
+        transactionCount: 1,
+        totalInvoiceValue: b.orderValue ?? 0,
+        averageRating: null,
+        ratingCount: 0,
+      });
+    }
+  }
+
+  const ratingsByUser = new Map<string, number[]>();
+  for (const r of reviews) {
+    if (!ratingsByUser.has(r.targetId)) ratingsByUser.set(r.targetId, []);
+    ratingsByUser.get(r.targetId)!.push(r.rating);
+  }
+
+  for (const [userId, summary] of map) {
+    const ratings = ratingsByUser.get(userId);
+    if (ratings && ratings.length > 0) {
+      summary.averageRating = ratings.reduce((a, b) => a + b, 0) / ratings.length;
+      summary.ratingCount = ratings.length;
+    }
+  }
+
+  return Array.from(map.values());
+}

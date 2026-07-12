@@ -12,6 +12,11 @@ export interface VendorProfile {
   isActive: boolean;
   createdAt: Date;
   updatedAt: Date;
+
+  // عدّاد استخدام تقرير "تقييم المشترين" الشهري (حماية من التكلفة، وليست
+  // حماية أمان حقيقية — راجع الملاحظة في lib/bookings.ts لسبب هذا القرار)
+  buyerReportRequestCount?: number;
+  buyerReportRequestMonth?: string;
 }
 
 export type UpdateVendorProfileInput = Partial<Omit<VendorProfile, "vendorId" | "createdAt">>;

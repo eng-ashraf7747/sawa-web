@@ -64,3 +64,58 @@ export const saveVendorProfile = async (
     });
   }
 };
+
+// ==========================================
+// عدّاد استخدام تقرير "تقييم المشترين" الشهري
+// ==========================================
+
+// الحد الأقصى مسموح به شهرياً - راجع نقاش القرار في hooks/useBookingReviews.ts
+const MAX_BUYER_REPORT_REQUESTS_PER_MONTH = 5;
+
+/**
+ * التحقق من عدّاد استخدام تقرير المشترين الشهري وتحديثه في نفس العملية
+ * (نفس منطق عدّاد طلبات كود الإحالة في onReferralRequest.ts تماماً،
+ * لكن Client-Side وليس Cloud Function — راجع الملاحظة المهمة أدناه)
+ *
+ * ⚠️ ملاحظة أمان مقصودة ومتفق عليها:
+ * هذا العدّاد حماية من التكلفة الزائدة (تقليل قراءات Firestore غير الضرورية)،
+ * وليس حماية أمان حقيقية ضد تلاعب متعمّد — بخلاف عدّاد الإحالة (Cloud Function
+ * على السيرفر) الذي يحمي ميزة فيها مصلحة مادية مباشرة للمستخدم إن تلاعب بها.
+ * هنا، المورد لا يكسب أي شيء من تجاوز العدّاد (يشاهد بياناته فقط)، فالتلاعب
+ * بأدوات المطوّر غير منطقي عملياً. القرار: عدّاد Client-Side كافٍ حالياً،
+ * ويُنقل لاحقاً إلى Cloud Function عند تنفيذ قواعد أمان Firestore الشاملة.
+ *
+ * يُرجع { allowed, remaining } — allowed=false يعني تجاوز الحد هذا الشهر
+ */
+export const checkAndIncrementBuyerReportUsage = async (
+  vendorId: string
+): Promise<{ allowed: boolean; remaining: number }> => {
+  const ref = doc(db, COLLECTION, vendorId);
+  const snap = await getDoc(ref);
+  const data = snap.exists() ? snap.data() : {};
+
+  const now = new Date();
+  const currentMonth = `${now.getFullYear()}-${now.getMonth() + 1}`;
+
+  const currentCount =
+    data.buyerReportRequestMonth === currentMonth
+      ? (data.buyerReportRequestCount ?? 0)
+      : 0;
+
+  if (currentCount >= MAX_BUYER_REPORT_REQUESTS_PER_MONTH) {
+    return { allowed: false, remaining: 0 };
+  }
+
+  const newCount = currentCount + 1;
+
+  await updateDoc(ref, {
+    buyerReportRequestCount: newCount,
+    buyerReportRequestMonth: currentMonth,
+    updatedAt: serverTimestamp(),
+  });
+
+  return {
+    allowed: true,
+    remaining: MAX_BUYER_REPORT_REQUESTS_PER_MONTH - newCount,
+  };
+};

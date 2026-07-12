@@ -351,6 +351,41 @@ export async function getProductRatingAverage(
 }
 
 // ==========================================
+// تقييم المشترين (vendor_to_user) — صفحة "تقييم المشترين"
+// ==========================================
+
+/**
+ * جلب كل التقييمات اللي كتبها مورد معيّن عن مشتريه (النوع vendor_to_user)
+ * تُستخدم فقط داخل صفحة المورد الخاصة (app/vendor/customers)، وليست عرضاً عاماً
+ *
+ * ملاحظات تصميم مقصودة:
+ * 1) الفلترة بحقل userId (وليس targetId كباقي الدوال) لأننا هنا نبحث عن
+ *    التقييمات التي كتبها هذا المورد، لا التقييمات الموجهة إليه
+ * 2) لا يوجد orderBy على السيرفر عمداً — هذا الاستعلام (userId + type)
+ *    تركيبة حقول مختلفة عن أي استعلام آخر بالمشروع، وقد يحتاج فهرساً
+ *    مركّباً جديداً في Firestore حتى بدون ترتيب. الترتيب (لو احتجناه) يتم
+ *    بالكود بعد وصول البيانات، تفادياً لتكرار مفاجأة الفهرس الناقص السابقة
+ * 3) لا فلترة على approved — هذا الحقل مخصص لتحكم عرض التقييمات العامة
+ *    للجمهور، بينما هذه شاشة داخلية للمورد نفسه فقط
+ */
+export async function getReviewsGivenByVendor(
+  vendorId: string
+): Promise <BookingReview[]> {
+  try {
+    const q = query(
+      collection(db, "bookingReviews"),
+      where("userId", "==", vendorId),
+      where("type", "==", "vendor_to_user")
+    );
+    const snap = await getDocs(q);
+    return snap.docs.map((d) => toBookingReview(d.id, d.data()));
+  } catch (error) {
+    console.error("getReviewsGivenByVendor error:", error);
+    throw new Error("تعذر جلب تقييمات المشترين");
+  }
+}
+
+// ==========================================
 // دوال فلترة الحجوزات (Client-Side)
 // ==========================================
 
