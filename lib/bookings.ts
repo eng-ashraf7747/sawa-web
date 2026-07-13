@@ -248,6 +248,35 @@ export async function getVendorBookings(
   }
 }
 
+// ==========================================
+// عدّ الحجوزات القائمة على صفقة معينة (Safety check قبل الحذف)
+// ==========================================
+
+/**
+ * عدّ الحجوزات ذات الالتزام القائم (pending أو delivered) على صفقة معينة
+ * تُستخدم فقط لتحذير الأدمن قبل حذف الصفقة — لا تشمل الحجوزات المكتملة
+ * أو الملغاة، لأنها لم تعد تمثل التزاماً قائماً يستدعي التحذير
+ *
+ * ملاحظة تصميم: نفس نمط countActiveDealsByCategory في lib/deals.ts —
+ * جرد لمرة واحدة (getDocs)، وليس اشتراكاً لحظياً (onSnapshot)
+ */
+export async function countActiveBookingsByDeal(
+  dealId: string
+): Promise <number> {
+  try {
+    const q = query(
+      collection(db, "bookings"),
+      where("dealId", "==", dealId),
+      where("status", "in", ["pending", "delivered"])
+    );
+    const snap = await getDocs(q);
+    return snap.size;
+  } catch (error) {
+    console.error("countActiveBookingsByDeal error:", error);
+    throw new Error("تعذر التحقق من الحجوزات المرتبطة بهذه الصفقة");
+  }
+}
+
 export async function createBookingReview(
   input: CreateBookingReviewInput
 ): Promise <string> {

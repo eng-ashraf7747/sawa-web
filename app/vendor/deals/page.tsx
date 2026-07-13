@@ -1,3 +1,4 @@
+
 // C:\sawa-web\app\vendor\deals\page.tsx
 
 "use client";
@@ -7,12 +8,128 @@ import { useVendorGuard } from "@/hooks/useVendorGuard";
 import { useUser } from "@/hooks/useUser";
 import { useVendorDeals } from "@/hooks/useDeals";
 import { useActiveCategories } from "@/hooks/useCategories";
-import { addDeal, updateDeal } from "@/lib/deals";
-import { Deal, CreateDealInput, DEAL_STATUS_LABELS } from "@/types/deal";
+import { addDeal, updateDeal, toggleDealActive, deleteDeal } from "@/lib/deals";
+import { useAsyncAction } from "@/hooks/useAsyncAction";
+import { Deal, CreateDealInput, DEAL_STATUS_LABELS, formatDealExpiryLabel } from "@/types/deal";
 import VendorLayout from "@/components/vendor/VendorLayout";
 import DealForm from "@/components/admin/DealForm";
 
 type ModalMode = "add" | "edit" | null;
+
+/**
+ * بطاقة صفقة واحدة للمورد — نفس مستوى التفاصيل المعروض لبطاقة الأدمن
+ * (components/admin/DealCard.tsx) بالضبط (Symmetry)، لكن بصلاحيات محدودة:
+ *
+ * - تعديل مباشر: بس لو draft/rejected (زي ما كان قبل كده)
+ * - حذف: بس لو draft/rejected — هذه الحالات لا يمكن أبداً أن يكون عليها
+ *   أي حجز حقيقي (لم تُنشر للجمهور بعد)، فلا حاجة لفحص حجوزات قبل الحذف
+ *   (بخلاف حذف الأدمن لصفقة منشورة فعلياً — راجع DealCard.tsx للأدمن)
+ * - تعطيل/تفعيل: بس لو active/inactive (حالات معتمدة من الأدمن مسبقاً) —
+ *   لا يمكن للمورد "تنشيط" صفقة pending أو rejected بنفسه، حفاظاً على
+ *   سلطة موافقة الأدمن
+ *
+ * مُغلَّفة بـ useAsyncAction الخاص بها (وليس هوك مشترك على مستوى الصفحة)
+ * بنفس نمط DealCard.tsx للأدمن تماماً، عشان كل بطاقة تدير حالة تحميلها
+ * لوحدها ولا تُعطِّل بقية البطاقات أثناء تنفيذ إجراء عليها
+ */
+function VendorDealCard({
+  deal,
+  onEdit,
+}: {
+  deal: Deal;
+  onEdit: (deal: Deal) => void;
+}) {
+  const { run, loading } = useAsyncAction();
+  const expiryLabel = formatDealExpiryLabel(deal.expiresAt);
+
+  const handleToggle = async () => {
+    await run(async () => {
+      await toggleDealActive(deal.id, deal.status === "active");
+    });
+  };
+
+  const handleDelete = async () => {
+    if (!confirm(`هل تريد حذف "${deal.title}" نهائياً؟`)) return;
+    await run(async () => {
+      await deleteDeal(deal.id);
+    });
+  };
+
+  return (
+    <div className="flex items-start gap-3 p-3 md:p-4 bg-slate-50 rounded-lg border border-slate-100">
+      {deal.imageUrl ? (
+        <img
+          src={deal.imageUrl}
+          alt={deal.title}
+          className="w-14 h-14 rounded-lg object-cover flex-shrink-0"
+        />
+      ) : (
+        <div className="w-14 h-14 rounded-lg bg-slate-200 flex items-center justify-center flex-shrink-0">
+          <span className="text-xl">🏷️</span>
+        </div>
+      )}
+
+      <div className="min-w-0 flex-1">
+        <div className="flex items-start justify-between gap-2 mb-1">
+          <p className="text-sm font-medium text-slate-800 truncate">{deal.title}</p>
+          <span className={`
+            flex-shrink-0 text-[10px] font-bold px-2 py-0.5 rounded-full
+            ${deal.status === "active" ? "bg-green-100 text-green-700"
+              : deal.status === "pending" ? "bg-amber-100 text-amber-700"
+              : deal.status === "rejected" ? "bg-red-100 text-red-500"
+              : "bg-slate-100 text-slate-500"}
+          `}>
+            {DEAL_STATUS_LABELS[deal.status]}
+          </span>
+        </div>
+
+        <p className="text-xs text-slate-500 mb-1.5 line-clamp-2">{deal.description}</p>
+        <p className="text-xs text-[#c9a84c] font-bold">{deal.discount}</p>
+        {expiryLabel && (
+          <p className="text-[11px] text-slate-400 mt-1">{expiryLabel}</p>
+        )}
+
+        <div className="flex items-center gap-2 mt-2">
+          {(deal.status === "draft" || deal.status === "rejected") && (
+            <>
+              <button
+                onClick={() => onEdit(deal)}
+                className="text-xs px-2 py-1 rounded-lg bg-slate-100 text-slate-600 hover:bg-slate-200 transition"
+              >
+                تعديل
+              </button>
+              <button
+                onClick={handleDelete}
+                disabled={loading}
+                className="text-xs px-2 py-1 rounded-lg bg-red-50 text-red-500 hover:bg-red-100 disabled:opacity-50 transition"
+              >
+                {loading ? "..." : "حذف"}
+              </button>
+            </>
+          )}
+          {deal.status === "active" && (
+            <button
+              onClick={handleToggle}
+              disabled={loading}
+              className="text-xs px-2 py-1 rounded-lg bg-red-50 text-red-500 hover:bg-red-100 disabled:opacity-50 transition"
+            >
+              {loading ? "..." : "تعطيل"}
+            </button>
+          )}
+          {deal.status === "inactive" && (
+            <button
+              onClick={handleToggle}
+              disabled={loading}
+              className="text-xs px-2 py-1 rounded-lg bg-green-50 text-green-600 hover:bg-green-100 disabled:opacity-50 transition"
+            >
+              {loading ? "..." : "تفعيل"}
+            </button>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
 
 export default function VendorDealsPage() {
   const { isAuthorized, loading: authLoading, vendorId } = useVendorGuard();
@@ -36,6 +153,11 @@ export default function VendorDealsPage() {
     await updateDeal(editTarget.id, data);
     setModalMode(null);
     setEditTarget(null);
+  };
+
+  const openEdit = (deal: Deal) => {
+    setEditTarget(deal);
+    setModalMode("edit");
   };
 
   const closeModal = () => {
@@ -92,48 +214,7 @@ export default function VendorDealsPage() {
         ) : (
           <div className="space-y-3">
             {deals.map((deal) => (
-              <div
-                key={deal.id}
-                className="flex items-center justify-between p-3 md:p-4 bg-slate-50 rounded-lg border border-slate-100"
-              >
-                <div className="flex items-center gap-3 min-w-0">
-                  {deal.imageUrl ? (
-                    <img
-                      src={deal.imageUrl}
-                      alt={deal.title}
-                      className="w-10 h-10 rounded-lg object-cover flex-shrink-0"
-                    />
-                  ) : (
-                    <div className="w-10 h-10 rounded-lg bg-slate-200 flex items-center justify-center flex-shrink-0">
-                      <span className="text-lg">🏷️</span>
-                    </div>
-                  )}
-                  <div className="min-w-0">
-                    <p className="text-sm font-medium text-slate-800 truncate">{deal.title}</p>
-                    <p className="text-xs text-[#c9a84c] font-medium">{deal.discount}</p>
-                  </div>
-                </div>
-                <div className="flex items-center gap-2 flex-shrink-0">
-                  <span className={`
-                    text-[10px] md:text-xs font-bold px-2 py-0.5 rounded-full
-                    ${deal.status === "active" ? "bg-green-100 text-green-700"
-                      : deal.status === "pending" ? "bg-amber-100 text-amber-700"
-                      : deal.status === "rejected" ? "bg-red-100 text-red-500"
-                      : deal.status === "draft" ? "bg-slate-100 text-slate-500"
-                      : "bg-slate-100 text-slate-400"}
-                  `}>
-                    {DEAL_STATUS_LABELS[deal.status]}
-                  </span>
-                  {(deal.status === "draft" || deal.status === "rejected") && (
-                    <button
-                      onClick={() => { setEditTarget(deal); setModalMode("edit"); }}
-                      className="text-xs px-2 py-1 rounded-lg bg-slate-100 text-slate-600 hover:bg-slate-200 transition"
-                    >
-                      تعديل
-                    </button>
-                  )}
-                </div>
-              </div>
+              <VendorDealCard key={deal.id} deal={deal} onEdit={openEdit} />
             ))}
           </div>
         )}

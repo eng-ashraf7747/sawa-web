@@ -2,8 +2,9 @@
 
 "use client";
 
-import { Deal } from "@/types/deal";
+import { Deal, formatDealExpiryLabel } from "@/types/deal";
 import { toggleDealActive, deleteDeal, approveDeal, rejectDeal } from "@/lib/deals";
+import { countActiveBookingsByDeal } from "@/lib/bookings";
 import { useAsyncAction } from "@/hooks/useAsyncAction";
 
 interface DealCardProps {
@@ -35,11 +36,23 @@ export default function DealCard({ deal, onEdit }: DealCardProps) {
   };
 
   const handleDelete = async () => {
-    if (!confirm(`هل تريد حذف "${deal.title}" نهائياً؟`)) return;
     await run(async () => {
+      const activeCount = await countActiveBookingsByDeal(deal.id);
+      if (activeCount > 0) {
+        const confirmed = confirm(
+          `تحذير: هذه الصفقة عليها ${activeCount} حجز قائم (لسه في انتظار التسليم أو الاستلام). ` +
+          `حذف الصفقة الآن لن يلغي هذه الحجوزات، لكن ستختفي من قائمة صفقات المورد وقد ينسى المتابعة معها. ` +
+          `هل أنت متأكد من المتابعة؟`
+        );
+        if (!confirmed) return;
+      } else {
+        if (!confirm(`هل تريد حذف "${deal.title}" نهائياً؟`)) return;
+      }
       await deleteDeal(deal.id);
     });
   };
+
+  const expiryLabel = formatDealExpiryLabel(deal.expiresAt);
 
   // ─── شريط الحالة ─────────────────────────────────────────
   const statusBar = {
@@ -88,7 +101,10 @@ export default function DealCard({ deal, onEdit }: DealCardProps) {
       <div className="p-3 md:p-4">
         <h3 className="text-sm font-bold text-slate-800 mb-1 truncate">{deal.title}</h3>
         <p className="text-xs text-slate-500 mb-2 line-clamp-2">{deal.description}</p>
-        <p className="text-sm font-bold text-[#c9a84c] mb-3">{deal.discount}</p>
+        <p className={`text-sm font-bold text-[#c9a84c] ${expiryLabel ? "mb-1" : "mb-3"}`}>{deal.discount}</p>
+        {expiryLabel && (
+          <p className="text-[10px] text-slate-400 mb-2">{expiryLabel}</p>
+        )}
 
         {/* ─── Actions ─────────────────────────────────── */}
         <div className="flex gap-2">
