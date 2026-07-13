@@ -11,12 +11,46 @@ import {
   where,
   onSnapshot,
   serverTimestamp,
+  Timestamp,
 } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import { Deal, CreateDealInput, UpdateDealInput } from "@/types/deal";
 
 const COLLECTION = "deals";
 const dealsRef = () => collection(db, COLLECTION);
+
+/**
+ * تحويل مستند Firestore الخام إلى Deal بأنواع صحيحة فعلياً وقت التشغيل
+ * (وليس فقط وقت الترجمة) — نفس نمط toBooking/toBookingReview في
+ * lib/bookings.ts بالضبط
+ *
+ * ⚠️ إصلاح باج حقيقي: كل دوال القراءة هنا كانت تستخدم سابقاً
+ * `{ id: d.id, ...d.data() } as Deal` — تحويل ساذج (Unsafe Cast) لا يحوّل
+ * حقول Firestore Timestamp (createdAt, updatedAt, expiresAt) إلى Date
+ * فعلياً. TypeScript كان "يصدّق" أنها Date وقت الترجمة، لكنها في وقت
+ * التشغيل كائنات Timestamp خام (لا تملك .getTime() أصلاً) — ما تسبب في
+ * انهيار formatDealExpiryLabel() فور استدعاء expiresAt.getTime() عليها.
+ * لم تظهر المشكلة قبل الآن لأن أياً من createdAt/updatedAt لم يُستخدم
+ * سابقاً بأي دالة خاصة بـ Date.
+ */
+function toDeal(id: string, data: any): Deal {
+  return {
+    id,
+    categoryId: data.categoryId,
+    vendorId: data.vendorId ?? null,
+    vendorName: data.vendorName ?? null,
+    title: data.title,
+    description: data.description,
+    imageUrl: data.imageUrl ?? null,
+    discount: data.discount,
+    externalUrl: data.externalUrl ?? null,
+    expiresAt: data.expiresAt ? (data.expiresAt as Timestamp).toDate() : null,
+    status: data.status,
+    order: data.order ?? 1,
+    createdAt: (data.createdAt as Timestamp)?.toDate() ?? new Date(),
+    updatedAt: (data.updatedAt as Timestamp)?.toDate() ?? new Date(),
+  };
+}
 
 // ─── Add Deal ─────────────────────────────────────────────
 export const addDeal = async (input: CreateDealInput): Promise<string> => {
@@ -85,7 +119,7 @@ export const streamDealsByCategory = (
   return onSnapshot(
     q,
     (snapshot) => {
-      callback(snapshot.docs.map((d) => ({ id: d.id, ...d.data() } as Deal)));
+      callback(snapshot.docs.map((d) => toDeal(d.id, d.data())));
     },
     onError
   );
@@ -104,7 +138,7 @@ export const streamPendingDeals = (
   return onSnapshot(
     q,
     (snapshot) => {
-      callback(snapshot.docs.map((d) => ({ id: d.id, ...d.data() } as Deal)));
+      callback(snapshot.docs.map((d) => toDeal(d.id, d.data())));
     },
     onError
   );
@@ -125,7 +159,7 @@ export const streamActiveDealsByCategory = (
   return onSnapshot(
     q,
     (snapshot) => {
-      callback(snapshot.docs.map((d) => ({ id: d.id, ...d.data() } as Deal)));
+      callback(snapshot.docs.map((d) => toDeal(d.id, d.data())));
     },
     onError
   );
@@ -145,7 +179,7 @@ export const streamVendorDeals = (
   return onSnapshot(
     q,
     (snapshot) => {
-      callback(snapshot.docs.map((d) => ({ id: d.id, ...d.data() } as Deal)));
+      callback(snapshot.docs.map((d) => toDeal(d.id, d.data())));
     },
     onError
   );
