@@ -1,3 +1,4 @@
+
 // C:\sawa-web\components\admin\DealForm.tsx
 
 "use client";
@@ -19,6 +20,21 @@ interface DealFormProps {
   vendorName?: string;
 }
 
+/**
+ * تحويل تاريخ لصيغة YYYY-MM-DD (المطلوبة لخانة <input type="date">)
+ * بالتوقيت المحلي — نفس منطق formatDateToLocal في lib/bookings.ts تماماً،
+ * لكن مُعرَّفة محلياً هنا (غير مُصدَّرة) لتفادي استيراد lib/bookings.ts
+ * (الذي يستورد db) داخل مكوّن نموذج لا علاقة له بـ Firestore مباشرة
+ */
+function toDateInputValue(date: Date | null | undefined): string {
+  if (!date) return "";
+  const d = date instanceof Date ? date : new Date(date);
+  const year = d.getFullYear();
+  const month = String(d.getMonth() + 1).padStart(2, "0");
+  const day = String(d.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+}
+
 export default function DealForm({
   categoryId,
   initialValues,
@@ -38,6 +54,7 @@ export default function DealForm({
   const [externalUrl, setExternalUrl] = useState(initialValues?.externalUrl ?? "");
   const [selectedVendorId, setSelectedVendorId] = useState(initialValues?.vendorId ?? "");
   const [order, setOrder] = useState(initialValues?.order ?? 1);
+  const [expiresAt, setExpiresAt] = useState(toDateInputValue(initialValues?.expiresAt));
   const [error, setError] = useState<string | null>(null);
 
   const handleSubmit = async () => {
@@ -64,7 +81,9 @@ export default function DealForm({
           externalUrl: externalUrl.trim() || null,
           order,
           status: isVendor ? "pending" : (initialValues?.status ?? "active"),
-          expiresAt: null,
+          // نهاية اليوم المحدد (23:59:59) — العرض يظل ساري حتى آخر لحظة
+          // في التاريخ المختار، لا يختفي فجأة عند بداية ذلك اليوم
+          expiresAt: expiresAt ? new Date(`${expiresAt}T23:59:59`) : null,
         });
       } catch {
         setError("حدث خطأ — حاول مرة أخرى");
@@ -136,6 +155,22 @@ export default function DealForm({
           placeholder="https://..."
           className="w-full px-4 py-2.5 rounded-lg border border-slate-200 text-sm text-slate-800 focus:outline-none focus:border-[#1a3c6e] focus:ring-1 focus:ring-[#1a3c6e] transition"
         />
+      </div>
+
+      {/* ─── تاريخ انتهاء الصلاحية — اختياري، للمورد والأدمن معاً ── */}
+      <div>
+        <label className="block text-sm font-medium text-slate-700 mb-1">
+          تاريخ انتهاء الصلاحية <span className="text-slate-400 text-xs">(اختياري)</span>
+        </label>
+        <input
+          type="date"
+          value={expiresAt}
+          onChange={(e) => setExpiresAt(e.target.value)}
+          className="w-full px-4 py-2.5 rounded-lg border border-slate-200 text-sm text-slate-800 focus:outline-none focus:border-[#1a3c6e] focus:ring-1 focus:ring-[#1a3c6e] transition"
+        />
+        <p className="text-xs text-slate-400 mt-1">
+          لو محدّدتش تاريخ، العرض هيفضل ساري لحد ما تعطّله بنفسك
+        </p>
       </div>
 
       {/* ─── مقدم الخدمة — للأدمن فقط ───────────────────── */}
@@ -210,3 +245,4 @@ export default function DealForm({
     </div>
   );
 }
+
