@@ -38,8 +38,7 @@ export default function VendorTransactionsPage() {
         ) : transactions.length === 0 ? (
           <div className="flex flex-col items-center py-12 md:py-16 text-slate-400">
             <span className="text-5xl mb-4">📋</span>
-            <p className="text-sm font-medium">لا توجد عمليات بعد</p>
-            <p className="text-xs mt-1">ستظهر هنا عند أول عملية عبر سوا</p>
+            <p className="text-sm font-medium">الصفحة تحت الإنشاء والتطوير</p>
           </div>
         ) : (
           <div className="space-y-2">
