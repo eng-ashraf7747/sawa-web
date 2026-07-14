@@ -44,6 +44,10 @@ export default function BookingContactModal({
       dealCategory: deal.categoryId ?? "",
       userName: userData.displayName ?? "",
       vendorName: vendor.businessName ?? "",
+      // Snapshot من بروفايل المستخدم وقت الحجز — null صراحةً (وليس undefined)
+      // لأن Firestore يرفض حقول undefined في هذا المشروع (ignoreUndefinedProperties غير مفعّلة)
+      buyerPhone: userData.phone ?? null,
+      buyerAddress: userData.address ?? null,
       contactChannel: channel,
       isFirstBooking: false,
       isFirstBookingWithVendor: false,

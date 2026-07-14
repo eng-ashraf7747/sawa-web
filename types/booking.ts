@@ -23,6 +23,12 @@ export interface Booking {
   userName: string;
   vendorName: string;
 
+  // بيانات تواصل المشتري وقت الحجز (اختيارية) — Snapshot من بروفايله
+  // في تلك اللحظة، وليست قراءة حية لاحقاً (تفادياً لتعارض قاعدة
+  // users/{uid} الأمنية التي تمنع المورد من قراءة بروفايل مشترٍ آخر مباشرة)
+  buyerPhone?: string | null;
+  buyerAddress?: string | null;
+
   // قناة التواصل
   contactChannel: ContactChannel;
 
@@ -58,6 +64,8 @@ export type CreateBookingInput = {
   dealCategory: string;
   userName: string;
   vendorName: string;
+  buyerPhone?: string | null;
+  buyerAddress?: string | null;
   contactChannel: ContactChannel;
   isFirstBooking: boolean;
   isFirstBookingWithVendor: boolean;
