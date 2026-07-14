@@ -8,6 +8,7 @@ import { useUserBookings } from "@/hooks/useBookings";
 import { useBookingActions } from "@/hooks/useBookings";
 import BookingCompletionModal from "@/components/dashboard/BookingCompletionModal";
 import BookingsFilters from "@/components/shared/BookingsFilters";
+import VendorProfileCard from "@/components/vendor/VendorProfileCard";
 import { Booking, BOOKING_STATUS_LABELS } from "@/types/booking";
 
 export default function UserBookingsPage() {
@@ -16,6 +17,7 @@ export default function UserBookingsPage() {
   const { complete } = useBookingActions();
   const [selectedBooking, setSelectedBooking] = useState <Booking | null>(null);
   const [filteredBookings, setFilteredBookings] = useState<Booking[]>([]);
+  const [selectedVendor, setSelectedVendor] = useState<{ vendorId: string; vendorName: string } | null>(null);
 
   if (!userData) return null;
 
@@ -95,6 +97,21 @@ export default function UserBookingsPage() {
                         </span>
                       </div>
 
+                      {/* ─── بيانات المورد — لمعرفة صاحب الطلب عند تعدد الموردين ─── */}
+                      {booking.vendorId && booking.vendorName && (
+                        <div className="flex items-center justify-between bg-gray-50 rounded-xl p-3 mb-3">
+                          <p className="text-sm font-semibold text-gray-700">
+                            🏪 {booking.vendorName}
+                          </p>
+                          <button
+                            onClick={() => setSelectedVendor({ vendorId: booking.vendorId, vendorName: booking.vendorName })}
+                            className="text-[10px] font-bold text-[#1a3c6e] hover:text-[#c9a84c] transition-colors flex-shrink-0"
+                          >
+                            تفاصيل المورد
+                          </button>
+                        </div>
+                      )}
+
                       {booking.orderValue && (
                         <p className="text-sm text-gray-600 mb-3">
                           قيمة الطلب:
@@ -125,6 +142,14 @@ export default function UserBookingsPage() {
             booking={selectedBooking}
             onClose={() => setSelectedBooking(null)}
             onCompleted={() => setSelectedBooking(null)}
+          />
+        )}
+
+        {selectedVendor && (
+          <VendorProfileCard
+            vendorId={selectedVendor.vendorId}
+            vendorName={selectedVendor.vendorName}
+            onClose={() => setSelectedVendor(null)}
           />
         )}
 

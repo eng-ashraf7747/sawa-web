@@ -2,6 +2,7 @@
 import {
   collection,
   doc,
+  getDoc,
   updateDoc,
   query,
   orderBy,
@@ -47,6 +48,16 @@ export const streamAllUsers = (
       onError(error);
     }
   );
+};
+
+// ─── Get Single User (لعرض بيانات تواصل المشتري في كارت الحجز) ─────
+// جلب لمرة واحدة (وليس اشتراكاً حياً) — يُستخدم في سياقات محدودة
+// (كارت حجز واحد)، بخلاف streamAllUsers المخصصة لشاشات الأدمن الجماعية
+export const getUser = async (uid: string): Promise<User | null> => {
+  if (!uid) return null;
+  const snap = await getDoc(doc(db, COLLECTION, uid));
+  if (!snap.exists()) return null;
+  return { uid: snap.id, ...snap.data() } as User;
 };
 
 // ─── Update User Role ─────────────────────────────

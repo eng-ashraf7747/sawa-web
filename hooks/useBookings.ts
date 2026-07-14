@@ -11,6 +11,8 @@ import {
   markCompleted,
   cancelBooking,
 } from "@/lib/bookings";
+import { getUser } from "@/lib/users";
+import { User } from "@/types";
 import {
   Booking,
   CreateBookingInput,
@@ -138,4 +140,39 @@ export function useBookingActions() {
     loading, 
     error: actionError 
   };
+}
+
+// ===== بيانات تواصل مشترٍ واحد (لعرضها في كارت حجز المورد) =====
+// جلب لمرة واحدة (وليس اشتراكاً حياً) — بيانات ثابتة نسبياً (تليفون/عنوان)
+// لا تستدعي مراقبة لحظية لكل كارت حجز في القائمة
+export function useBuyerContact(userId: string) {
+  const [buyer, setBuyer] = useState<User | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    if (!userId) {
+      setLoading(false);
+      return;
+    }
+
+    let isActive = true;
+
+    const load = async () => {
+      setLoading(true);
+      try {
+        const data = await getUser(userId);
+        if (isActive) setBuyer(data);
+      } catch {
+        if (isActive) setBuyer(null);
+      } finally {
+        if (isActive) setLoading(false);
+      }
+    };
+
+    load();
+
+    return () => { isActive = false; };
+  }, [userId]);
+
+  return { buyer, loading };
 }

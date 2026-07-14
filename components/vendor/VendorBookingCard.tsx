@@ -4,7 +4,7 @@
 
 import { useState } from "react";
 import { Booking, BOOKING_STATUS_LABELS, CONTACT_CHANNEL_LABELS } from "@/types/booking";
-import { useBookingActions } from "@/hooks/useBookings";
+import { useBookingActions, useBuyerContact } from "@/hooks/useBookings";
 import { useAsyncAction } from "@/hooks/useAsyncAction";
 
 interface Props {
@@ -29,6 +29,7 @@ function formatDateTime(date: Date | string | null | undefined): string {
 export default function VendorBookingCard({ booking, onUpdated }: Props) {
   const { deliver, cancel } = useBookingActions();
   const { run, loading } = useAsyncAction();
+  const { buyer, loading: buyerLoading } = useBuyerContact(booking.userId);
   const [orderValue, setOrderValue] = useState("");
   const [showDeliverForm, setShowDeliverForm] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -88,6 +89,23 @@ export default function VendorBookingCard({ booking, onUpdated }: Props) {
         <span className={`text-xs font-semibold px-2 py-1 rounded-full ${statusColors[booking.status]}`}>
           {BOOKING_STATUS_LABELS[booking.status]}
         </span>
+      </div>
+
+      {/* ─── بيانات المشتري — لتمييز الأوردر عن غيره بدقة ─── */}
+      <div className="bg-gray-50 rounded-xl p-3 mb-3">
+        <p className="text-sm font-semibold text-gray-700">{booking.userName}</p>
+        {buyerLoading ? (
+          <div className="h-3 w-32 bg-gray-200 rounded mt-1.5 animate-pulse" />
+        ) : (
+          <>
+            {buyer?.phone && (
+              <p className="text-xs text-gray-500 mt-1">📞 {buyer.phone}</p>
+            )}
+            {buyer?.address && (
+              <p className="text-xs text-gray-500 mt-0.5">📍 {buyer.address}</p>
+            )}
+          </>
+        )}
       </div>
 
       {booking.orderValue && (
