@@ -1,5 +1,6 @@
-// C:\sawa-web\lib\bookings.ts
 
+// C:\sawa-web\lib\bookings.ts
+ 
 import { addCommissionEntry } from "@/lib/commissionLedger";
 import { db } from "./firebase";
 import {
@@ -30,7 +31,7 @@ import {
   calculateRatingAverage,
 } from "@/types/booking";
 import { trackEvent } from "@/lib/analytics";
-
+ 
 function toBooking(id: string, data: any): Booking {
   return {
     id,
@@ -42,6 +43,8 @@ function toBooking(id: string, data: any): Booking {
     dealCategory: data.dealCategory ?? "",
     userName: data.userName ?? "",
     vendorName: data.vendorName ?? "",
+    buyerPhone: data.buyerPhone ?? null,
+    buyerAddress: data.buyerAddress ?? null,
     contactChannel: data.contactChannel,
     status: data.status,
     orderValue: data.orderValue ?? null,
@@ -63,7 +66,7 @@ function toBooking(id: string, data: any): Booking {
       : null,
   };
 }
-
+ 
 function toBookingReview(id: string, data: any): BookingReview {
   return {
     id,
@@ -77,7 +80,7 @@ function toBookingReview(id: string, data: any): BookingReview {
     createdAt: (data.createdAt as Timestamp)?.toDate() ?? new Date(),
   };
 }
-
+ 
 export async function createBooking(
   input: CreateBookingInput
 ): Promise <string> {
@@ -94,7 +97,7 @@ export async function createBooking(
       completedAt: null,
       cancelledAt: null,
     });
-
+ 
     await trackEvent({
       eventType: "booking_created",
       userId: input.userId,
@@ -109,21 +112,21 @@ export async function createBooking(
         isReferral: input.isReferral,
       },
     });
-
+ 
     return ref.id;
   } catch (error) {
     console.error("createBooking error:", error);
     throw new Error("تعذر إنشاء الحجز");
   }
 }
-
+ 
 export async function markDelivered(
   bookingId: string,
   input: DeliverBookingInput
 ): Promise <void> {
   try {
     const bookingRef = doc(db, "bookings", bookingId);
-
+ 
     // التحقق المبكر من وجود الحجز قبل أي تحديث (Fail Fast)
     // ملاحظة تصميم: لا نستخدم runTransaction هنا عمداً، لأن addCommissionEntry
     // في lib/commissionLedger.ts تستخدم addDoc عادية (لا تقبل كائن transaction) —
@@ -136,13 +139,13 @@ export async function markDelivered(
       throw new Error("الحجز غير موجود");
     }
     const bookingData = bookingSnap.data();
-
+ 
     const commission = Math.min(
       input.orderValue * COMMISSION_RATE,
       MAX_COMMISSION_PER_BOOKING
     );
     const vendorPoints = Math.floor(input.orderValue * POINTS_PER_EGP);
-
+ 
     await updateDoc(bookingRef, {
       status: "delivered" as BookingStatus,
       orderValue: input.orderValue,
@@ -150,7 +153,7 @@ export async function markDelivered(
       vendorPoints,
       deliveredAt: serverTimestamp(),
     });
-
+ 
     await addCommissionEntry({
       bookingId,
       userId: bookingData.userId ?? "",
@@ -160,7 +163,7 @@ export async function markDelivered(
       commissionRate: COMMISSION_RATE,
       commissionCap: MAX_COMMISSION_PER_BOOKING,
     });
-
+ 
     await trackEvent({
       eventType: "booking_delivered",
       bookingId,
@@ -172,7 +175,7 @@ export async function markDelivered(
     throw new Error("تعذر تحديث حالة الحجز");
   }
 }
-
+ 
 export async function markCompleted(
   bookingId: string
 ): Promise <void> {
@@ -181,7 +184,7 @@ export async function markCompleted(
       status: "completed" as BookingStatus,
       completedAt: serverTimestamp(),
     });
-
+ 
     await trackEvent({
       eventType: "booking_completed",
       bookingId,
@@ -191,7 +194,7 @@ export async function markCompleted(
     throw new Error("تعذر تأكيد الاستلام");
   }
 }
-
+ 
 export async function cancelBooking(
   bookingId: string,
   input?: CancelBookingInput
@@ -202,7 +205,7 @@ export async function cancelBooking(
       cancellationReason: input?.cancellationReason ?? null,
       cancelledAt: serverTimestamp(),
     });
-
+ 
     await trackEvent({
       eventType: "booking_cancelled",
       bookingId,
@@ -213,7 +216,7 @@ export async function cancelBooking(
     throw new Error("تعذر إلغاء الحجز");
   }
 }
-
+ 
 export async function getUserBookings(
   userId: string
 ): Promise <Booking[]> {
@@ -230,7 +233,7 @@ export async function getUserBookings(
     throw new Error("تعذر جلب الحجوزات");
   }
 }
-
+ 
 export async function getVendorBookings(
   vendorId: string
 ): Promise <Booking[]> {
@@ -247,11 +250,11 @@ export async function getVendorBookings(
     throw new Error("تعذر جلب الحجوزات");
   }
 }
-
+ 
 // ==========================================
 // عدّ الحجوزات القائمة على صفقة معينة (Safety check قبل الحذف)
 // ==========================================
-
+ 
 /**
  * عدّ الحجوزات ذات الالتزام القائم (pending أو delivered) على صفقة معينة
  * تُستخدم فقط لتحذير الأدمن قبل حذف الصفقة — لا تشمل الحجوزات المكتملة
@@ -276,7 +279,7 @@ export async function countActiveBookingsByDeal(
     throw new Error("تعذر التحقق من الحجوزات المرتبطة بهذه الصفقة");
   }
 }
-
+ 
 export async function createBookingReview(
   input: CreateBookingReviewInput
 ): Promise <string> {
@@ -286,7 +289,7 @@ export async function createBookingReview(
       approved: false,
       createdAt: serverTimestamp(),
     });
-
+ 
     await trackEvent({
       eventType: "review_product_submitted",
       userId: input.userId,
@@ -296,14 +299,14 @@ export async function createBookingReview(
         rating: input.rating,
       },
     });
-
+ 
     return ref.id;
   } catch (error) {
     console.error("createBookingReview error:", error);
     throw new Error("تعذر إضافة التقييم");
   }
 }
-
+ 
 export async function getVendorReviews(
   vendorId: string
 ): Promise <BookingReview[]> {
@@ -323,7 +326,7 @@ export async function getVendorReviews(
     throw new Error("تعذر جلب التقييمات");
   }
 }
-
+ 
 export async function getVendorRatingAverage(
   vendorId: string
 ): Promise <{ average: number; count: number } | null> {
@@ -345,11 +348,11 @@ export async function getVendorRatingAverage(
     throw new Error("تعذر حساب متوسط التقييم");
   }
 }
-
+ 
 // ==========================================
 // PRC-RVW-04 — تقييم السلعة/الصفقة (user_to_product)
 // ==========================================
-
+ 
 /**
  * جلب متوسط تقييم صفقة/سلعة معينة (PRC-RVW-04)
  * يعتمد على مجموعة bookingReviews بنفس نمط getVendorRatingAverage تماماً،
@@ -378,11 +381,11 @@ export async function getProductRatingAverage(
     throw new Error("تعذر حساب متوسط تقييم السلعة");
   }
 }
-
+ 
 // ==========================================
 // تقييم المشترين (vendor_to_user) — صفحة "تقييم المشترين"
 // ==========================================
-
+ 
 /**
  * جلب كل التقييمات اللي كتبها مورد معيّن عن مشتريه (النوع vendor_to_user)
  * تُستخدم فقط داخل صفحة المورد الخاصة (app/vendor/customers)، وليست عرضاً عاماً
@@ -413,11 +416,11 @@ export async function getReviewsGivenByVendor(
     throw new Error("تعذر جلب تقييمات المشترين");
   }
 }
-
+ 
 // ==========================================
 // دوال فلترة الحجوزات (Client-Side)
 // ==========================================
-
+ 
 /**
  * تحويل التاريخ إلى نص بصيغة YYYY-MM-DD بالتوقيت المحلي
  * لتجنب مشكلة التحويل التلقائي لتوقيت جرينتش (UTC)
@@ -429,7 +432,7 @@ export function formatDateToLocal(date: Date | null | undefined): string {
   const day = String(date.getDate()).padStart(2, "0");
   return `${year}-${month}-${day}`;
 }
-
+ 
 /**
  * الحصول على النطاق الزمني الافتراضي
  * يعيد نفس اليوم من الشهر الماضي إلى اليوم الحالي
@@ -442,7 +445,7 @@ export function getDefaultDateRange(): { from: string; to: string } {
     to: formatDateToLocal(now),
   };
 }
-
+ 
 /**
  * استخراج تاريخ الحجز كنص محلي
  * يدعم أنواع التواريخ المختلفة (Firebase Timestamp, Date, String)
@@ -450,7 +453,7 @@ export function getDefaultDateRange(): { from: string; to: string } {
 function extractLocalDateStr(createdAt: any): string {
   if (!createdAt) return "";
   let date: Date | null = null;
-
+ 
   if (createdAt.toDate && typeof createdAt.toDate === "function") {
     date = createdAt.toDate(); // حالة Firestore Timestamp
   } else if (createdAt instanceof Date) {
@@ -458,10 +461,10 @@ function extractLocalDateStr(createdAt: any): string {
   } else if (typeof createdAt === "string") {
     date = new Date(createdAt);
   }
-
+ 
   return formatDateToLocal(date);
 }
-
+ 
 /**
  * فلترة مصفوفة الحجوزات بناءً على الحالات المحددة والنطاق الزمني
  */
@@ -472,18 +475,18 @@ export function filterBookings(
   toDate: string
 ): Booking[] {
   if (!bookings?.length) return [];
-
+ 
   return bookings.filter((booking) => {
     // 1. التحقق من الحالة (لو مفيش حالات محددة، يعرض الكل)
     if (selectedStatuses.length > 0 && !selectedStatuses.includes(booking.status)) {
       return false;
     }
-
+ 
     // 2. التحقق من التاريخ
     const bookingDateStr = extractLocalDateStr(booking.createdAt);
     if (fromDate && bookingDateStr < fromDate) return false;
     if (toDate && bookingDateStr > toDate) return false;
-
+ 
     return true;
   });
 }
