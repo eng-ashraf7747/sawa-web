@@ -44,8 +44,6 @@ export default function BookingContactModal({
       dealCategory: deal.categoryId ?? "",
       userName: userData.displayName ?? "",
       vendorName: vendor.businessName ?? "",
-      // Snapshot من بروفايل المستخدم وقت الحجز — null صراحةً (وليس undefined)
-      // لأن Firestore يرفض حقول undefined في هذا المشروع (ignoreUndefinedProperties غير مفعّلة)
       buyerPhone: userData.phone ?? null,
       buyerAddress: userData.address ?? null,
       contactChannel: channel,
@@ -81,7 +79,6 @@ export default function BookingContactModal({
       window.open(`tel:${vendor.phone}`);
     }
 
-    // بدل الإغلاق الفوري: نعرض رسالة النجاح في نفس الشاشة (البند 2 المعتمد)
     setStep("success");
   };
 
