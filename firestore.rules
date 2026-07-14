@@ -1,0 +1,178 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Shared helper functions
+
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function currentUid() {
+      return request.auth.uid;
+    }
+
+    function getUserRole(uid) {
+      return get(/databases/$(database)/documents/users/$(uid)).data.role;
+    }
+
+    function isAdmin() {
+      return isSignedIn() && getUserRole(currentUid()) == "admin";
+    }
+
+    function isVendor() {
+      return isSignedIn() && getUserRole(currentUid()) == "vendor";
+    }
+
+    function isOwner(uid) {
+      return isSignedIn() && currentUid() == uid;
+    }
+
+    function isVendorOfDoc(docData) {
+      return isSignedIn() && docData.get("vendorId", null) == currentUid();
+    }
+
+    function isUserOfDoc(docData) {
+      return isSignedIn() && docData.get("userId", null) == currentUid();
+    }
+
+    function fieldUnchanged(field) {
+      return request.resource.data.get(field, null) == resource.data.get(field, null);
+    }
+
+    function isValidRating(rating) {
+      return rating is int && rating >= 1 && rating <= 5;
+    }
+
+    function onlyUpdatingFields(allowedFields) {
+      return request.resource.data.diff(resource.data).affectedKeys().hasOnly(allowedFields);
+    }
+
+    // Requires 24h to pass since the user's last contact message (if any)
+    // before allowing a new one. lastContactMessageAt is updated from
+    // lib/contact.ts in the same atomic writeBatch as the message itself.
+    function canSendContactMessage() {
+      let lastSent = get(/databases/$(database)/documents/users/$(currentUid()))
+        .data.get("lastContactMessageAt", null);
+      return lastSent == null || request.time > lastSent + duration.value(24, "h");
+    }
+
+    // 1. users/{userId}
+    match /users/{userId} {
+      allow read: if isOwner(userId) || isAdmin();
+
+      allow create: if isOwner(userId) &&
+        request.resource.data.role == "user";
+
+      allow update: if (isOwner(userId) && fieldUnchanged("role")) || isAdmin();
+
+      allow delete: if false;
+
+      match /pointsLedger/{entryId} {
+        allow read: if isOwner(userId) || isAdmin();
+        allow write: if false;
+      }
+    }
+
+    // 2. bookings/{bookingId}
+    match /bookings/{bookingId} {
+      allow read: if isUserOfDoc(resource.data) || isVendorOfDoc(resource.data) || isAdmin();
+
+      allow create: if isUserOfDoc(request.resource.data) &&
+        request.resource.data.status == "pending";
+
+      allow update: if isAdmin() ||
+        (isVendorOfDoc(resource.data) &&
+          onlyUpdatingFields(["status", "orderValue", "commission", "vendorPoints", "deliveredAt"])) ||
+        (isUserOfDoc(resource.data) &&
+          onlyUpdatingFields(["status", "completedAt", "cancellationReason", "cancelledAt"]));
+
+      allow delete: if isAdmin();
+    }
+
+    // 3. bookingReviews/{reviewId}
+    match /bookingReviews/{reviewId} {
+      allow read: if isSignedIn();
+
+      allow create: if isUserOfDoc(request.resource.data) &&
+        isValidRating(request.resource.data.rating) &&
+        request.resource.data.approved == false;
+
+      allow update: if false;
+      allow delete: if isAdmin();
+    }
+
+    // 4. deals/{dealId}
+    match /deals/{dealId} {
+      allow read: if resource.data.status == "active" ||
+        (isSignedIn() && (isVendorOfDoc(resource.data) || isAdmin()));
+
+      allow create: if isAdmin() ||
+        (isVendor() && request.resource.data.vendorId == currentUid() &&
+          request.resource.data.status == "pending");
+
+      allow update: if isAdmin() ||
+        (isVendorOfDoc(resource.data) && (
+          (resource.data.status in ["draft", "rejected"] && request.resource.data.status == "pending") ||
+          (resource.data.status in ["active", "inactive"] &&
+            onlyUpdatingFields(["status", "updatedAt"]))
+        ));
+
+      allow delete: if isAdmin() ||
+        (isVendorOfDoc(resource.data) && resource.data.status in ["draft", "rejected"]);
+    }
+
+    // 5. categories/{categoryId}
+    match /categories/{categoryId} {
+      allow read: if true;
+      allow create, update, delete: if isAdmin();
+    }
+
+    // 6. commission_ledger/{entryId}
+    match /commission_ledger/{entryId} {
+      allow read: if isVendorOfDoc(resource.data) || isAdmin();
+      allow create: if isVendorOfDoc(request.resource.data);
+      allow update: if isAdmin();
+      allow delete: if false;
+    }
+
+    // 7. contact_messages/{messageId}
+    match /contact_messages/{messageId} {
+      allow read: if isUserOfDoc(resource.data) || isAdmin();
+      allow create: if isSignedIn() && canSendContactMessage();
+      allow update, delete: if isAdmin();
+    }
+
+    // 8. requests/{requestId}
+    match /requests/{requestId} {
+      allow read: if isUserOfDoc(resource.data) || isAdmin();
+      allow create: if isUserOfDoc(request.resource.data);
+      allow update: if isAdmin();
+      allow delete: if false;
+    }
+
+    // 9. vendorProfiles/{vendorId}
+    match /vendorProfiles/{vendorId} {
+      allow read: if true;
+      allow create: if isVendor() && isOwner(vendorId);
+      allow update: if isOwner(vendorId) || isAdmin();
+      allow delete: if false;
+    }
+
+    // 10. analytics_events/{eventId}
+    match /analytics_events/{eventId} {
+      allow read: if isAdmin();
+      allow create: if true;
+      allow update, delete: if false;
+    }
+
+    // 11. subcategoryStats/{subcategoryId}
+    match /subcategoryStats/{subcategoryId} {
+      allow read: if true;
+      allow create: if false;
+      allow update: if isSignedIn() && onlyUpdatingFields(["interestedCount"]);
+      allow delete: if false;
+    }
+
+  }
+}

@@ -1,7 +1,6 @@
 // C:\sawa-web\lib\contact.ts
 import {
   collection,
-  addDoc,
   getDocs,
   query,
   where,
@@ -68,13 +67,19 @@ const requireAdmin = (): Promise<void> => {
 };
 
 // ─── إرسال رسالة جديدة ───────────────────────────────────────
+// ملاحظة: نستخدم writeBatch (بدل addDoc المباشرة) عشان نكتب الرسالة
+// ونحدّث lastContactMessageAt على مستند المستخدم في نفس العملية الذرية —
+// هذا الحقل هو أساس التحقق من حد "رسالة واحدة يومياً" في firestore.rules
 export const submitContactMessage = async (
   input: CreateContactMessageInput
 ): Promise<string> => {
   const validationError = validateContactMessageInput(input);
   if (validationError) throw new Error(validationError);
 
-  const docRef = await addDoc(collection(db, COLLECTION_NAME), {
+  const messageRef = doc(collection(db, COLLECTION_NAME));
+  const batch = writeBatch(db);
+
+  batch.set(messageRef, {
     senderType: input.senderType,
     senderId: input.senderId,
     name: input.name,
@@ -88,7 +93,15 @@ export const submitContactMessage = async (
     createdAt: Timestamp.now(),
     updatedAt: Timestamp.now(),
   });
-  return docRef.id;
+
+  if (input.senderId) {
+    batch.update(doc(db, "users", input.senderId), {
+      lastContactMessageAt: Timestamp.now(),
+    });
+  }
+
+  await batch.commit();
+  return messageRef.id;
 };
 
 // ─── جلب الرسائل ───────────────────────────

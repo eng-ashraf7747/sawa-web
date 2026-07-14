@@ -1,0 +1,60 @@
+// C:\sawa-web\storage.rules
+rules_version = '2';
+
+service firebase.storage {
+  match /b/{bucket}/o {
+
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return request.auth != null &&
+             request.auth.uid == userId;
+    }
+
+    // بيقرا من Firestore عشان يتوافق مع نفس مصدر الحقيقة
+    // المُستخدَم في firestore.rules (مفيش custom claims حاليًا)
+    function isAdmin() {
+      return isSignedIn() &&
+             firestore.get(/databases/(default)/documents/users/$(request.auth.uid)).data.role == "admin";
+    }
+
+    function isVendor() {
+      return isSignedIn() &&
+             firestore.get(/databases/(default)/documents/users/$(request.auth.uid)).data.role == "vendor";
+    }
+
+    function validateImage() {
+      return request.resource.contentType.matches("^image/(jpeg|png|webp)$") &&
+             request.resource.size < 8 * 1024 * 1024 &&
+             request.resource.size > 1024; // حد أدنى 1KB - يمنع ملفات فاضية/تالفة
+    }
+
+    // ─── صور البروفايل الشخصي ─────────────────────────
+    // المسار الحقيقي: profile-images/{uid}/{timestamp}.jpg (من useUpdateProfile.ts)
+    match /profile-images/{userId}/{fileName} {
+      allow read: if true;
+      allow create, update: if isOwner(userId) && validateImage();
+      allow delete: if isOwner(userId) || isAdmin();
+    }
+
+    // ─── صور الصفقات ──────────────────────────────────
+    // المسار الحقيقي: deals/{timestamp}_{filename} (من ImageUpload.tsx)
+    // ⚠️ ملاحظة تصميم مهمة: هذا المسار لا يحتوي على vendorId، لذا لا يمكن
+    // التحقق من "هل هذا المورد صاحب هذه الصورة تحديدًا" على مستوى المسار.
+    // الحماية هنا أعمّ بالضرورة: أي مورد أو أدمن موثَّق يقدر يرفع صورة صفقة،
+    // لكن الحذف مقصور على الأدمن فقط تفاديًا لحذف مورد لصور مورد آخر بالخطأ
+    // أو عمدًا. تحسين مستقبلي: تعديل ImageUpload.tsx ليُدرج vendorId في
+    // المسار (deals/{vendorId}/{fileName}) للحصول على تحقق ملكية دقيق.
+    match /deals/{fileName} {
+      allow read: if true;
+      allow create, update: if isSignedIn() && (isVendor() || isAdmin()) && validateImage();
+      allow delete: if isAdmin();
+    }
+
+    match /{allPaths=**} {
+      allow read, write: if false;
+    }
+  }
+}
