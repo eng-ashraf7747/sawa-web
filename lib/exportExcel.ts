@@ -3,15 +3,15 @@
 import * as XLSX from "xlsx";
 import {
   collection,
-  collectionGroup,
   getDocs,
   query,
   where,
   orderBy,
   Timestamp,
 } from "firebase/firestore";
+import { getFunctions, httpsCallable } from "firebase/functions";
 import { db } from "@/lib/firebase";
-import { ANALYTICS_COLLECTIONS, POINTS_LEDGER_SUBCOLLECTION } from "@/types/analytics";
+import { ANALYTICS_COLLECTIONS } from "@/types/analytics";
 
 function fmtDate(d: any): string {
   if (!d) return "—";
@@ -40,7 +40,7 @@ async function getCategoryMap(): Promise<Record<string, string>> {
   return map;
 }
 
-// ─── Sheet 1: Summary ─────────────────────────────────────
+// ─── Sheet 1: Summary ─────────────────────────────────────────
 async function buildSummarySheet(
   startDate: Date,
   endDate: Date
@@ -64,21 +64,23 @@ async function buildSummarySheet(
   const totalUsers = usersSnap.docs.filter((d) => d.data().role === "user").length;
   const totalVendors = usersSnap.docs.filter((d) => d.data().role === "vendor").length;
 
-  const pointsSnap = await getDocs(
-    query(
-      collectionGroup(db, POINTS_LEDGER_SUBCOLLECTION),
-      where("timestamp", ">=", start),
-      where("timestamp", "<=", end)
-    )
-  );
-  const totalPointsGranted = pointsSnap.docs.reduce((sum, d) => {
-    const points = d.data().points ?? 0;
-    return points > 0 ? sum + points : sum;
-  }, 0);
-  const totalPointsRedeemed = pointsSnap.docs.reduce((sum, d) => {
-    const points = d.data().points ?? 0;
-    return points < 0 ? sum + Math.abs(points) : sum;
-  }, 0);
+  // ملاحظة معمارية (16 يوليو 2026): نفس استعلام النقاط الشامل الذي كان
+  // موجوداً في hooks/useExecutiveDashboard.ts (ومكسوراً بنفس السبب) كان
+  // مكرراً هنا حرفياً. انتقل الحساب بالكامل لنفس الدالة على السيرفر
+  // (Cloud Function: getPointsTotals) بدل تكرار المنطق المكسور مرتين.
+  const functions = getFunctions(undefined, "us-central1");
+  const getPointsTotals = httpsCallable<
+    { startMs: number; endMs: number },
+    { totalGranted: number; totalRedeemed: number }
+  >(functions, "getPointsTotals");
+
+  const pointsResult = await getPointsTotals({
+    startMs: startDate.getTime(),
+    endMs: endDate.getTime(),
+  });
+
+  const totalPointsGranted = pointsResult.data.totalGranted;
+  const totalPointsRedeemed = pointsResult.data.totalRedeemed;
 
   const conversionRate = bookings.length > 0
     ? Math.round((completed.length / bookings.length) * 100)
@@ -104,7 +106,7 @@ async function buildSummarySheet(
   ];
 }
 
-// ─── Sheet 2: Bookings ─────────────────────────────────────
+// ─── Sheet 2: Bookings ─────────────────────────────────────────
 async function buildBookingsSheet(
   startDate: Date,
   endDate: Date,
@@ -154,7 +156,7 @@ async function buildBookingsSheet(
   return [headers, ...rows];
 }
 
-// ─── Sheet 3: Users ─────────────────────────────────────
+// ─── Sheet 3: Users ─────────────────────────────────────────
 async function buildUsersSheet(
   startDate: Date,
   endDate: Date
@@ -203,7 +205,7 @@ async function buildUsersSheet(
   return [headers, ...rows];
 }
 
-// ─── Sheet 4: Vendors ─────────────────────────────────────
+// ─── Sheet 4: Vendors ─────────────────────────────────────────
 async function buildVendorsSheet(): Promise<any[][]> {
   const usersSnap = await getDocs(
     query(collection(db, "users"), where("role", "==", "vendor"))
@@ -243,7 +245,7 @@ async function buildVendorsSheet(): Promise<any[][]> {
   return [headers, ...rows];
 }
 
-// ─── Sheet 5: Analytics Events ─────────────────────────────────────
+// ─── Sheet 5: Analytics Events ─────────────────────────────────────────────
 async function buildAnalyticsSheet(
   startDate: Date,
   endDate: Date,
@@ -290,7 +292,7 @@ async function buildAnalyticsSheet(
   return [headers, ...rows];
 }
 
-// ─── Sheet 6: Commissions ─────────────────────────────────────
+// ─── Sheet 6: Commissions ─────────────────────────────────────────────
 async function buildCommissionsSheet(
   startDate: Date,
   endDate: Date
@@ -329,7 +331,7 @@ async function buildCommissionsSheet(
   return [headers, ...rows];
 }
 
-// ─── الدالة الرئيسية للتصدير ─────────────────────────────
+// ─── الدالة الرئيسية للتصدير ─────────────────────────────────────
 export async function exportToExcel(
   startDate: Date,
   endDate: Date

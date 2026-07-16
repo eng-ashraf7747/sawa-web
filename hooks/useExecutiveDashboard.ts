@@ -11,11 +11,11 @@ import {
   orderBy,
   Timestamp,
 } from "firebase/firestore";
+import { getFunctions, httpsCallable } from "firebase/functions";
 import { db } from "@/lib/firebase";
 import { getTotalCommissionDue } from "@/lib/commissionLedger";
-import { getTotalPointsGranted, getTotalPointsRedeemed } from "@/lib/pointsLedger";
 
-// ─── أنواع البيانات ───────────────────────────────────────
+// ─── أنواع البيانات ─────────────────────────────────────────
 export interface ExecutiveSummary {
   totalUsers: number;
   activeUsers: number;
@@ -78,14 +78,14 @@ export function useExecutiveDashboard(
       const start = Timestamp.fromDate(startDate);
       const end = Timestamp.fromDate(endDate);
 
-      // ─── المستخدمون ──────────────────────────────────
+      // ─── المستخدمون ─────────────────────────────────────────
       const usersSnap = await getDocs(collection(db, "users"));
       const totalUsers = usersSnap.size;
       const activeUsers = usersSnap.docs.filter(
         (d) => d.data().role === "user"
       ).length;
 
-      // ─── الموردون ────────────────────────────────────
+      // ─── الموردون ───────────────────────────────────────────
       const vendorsSnap = await getDocs(
         query(collection(db, "users"), where("role", "==", "vendor"))
       );
@@ -94,14 +94,14 @@ export function useExecutiveDashboard(
         (d) => d.data().isActive === true
       ).length;
 
-      // ─── الفئات — جلب الأسماء ────────────────────────
+      // ─── الفئات — جلب الأسماء ────────────────────────────────
       const categoriesSnap = await getDocs(collection(db, "categories"));
       const categoryMap: Record <string, string> = {};
       categoriesSnap.docs.forEach((d) => {
         categoryMap[d.id] = d.data().name ?? d.id;
       });
 
-      // ─── الحجوزات في الفترة ──────────────────────────
+      // ─── الحجوزات في الفترة ─────────────────────────────────
       const bookingsSnap = await getDocs(
         query(
           collection(db, "bookings"),
@@ -119,7 +119,7 @@ export function useExecutiveDashboard(
         ? Math.round((completedBookings / totalBookings) * 100)
         : 0;
 
-      // ─── القيم المالية ───────────────────────────────
+      // ─── القيم المالية ──────────────────────────────────────
       const completedWithValue = bookings.filter(
         (b) => b.status === "completed" && b.orderValue
       );
@@ -130,15 +130,30 @@ export function useExecutiveDashboard(
         ? Math.round(totalInvoiceValue / completedWithValue.length)
         : 0;
 
-      // ─── العمولات ────────────────────────────────────
+      // ─── العمولات ───────────────────────────────────────────
       const totalCommissionDue = await getTotalCommissionDue(startDate, endDate);
 
-      // ─── النقاط ──────────────────────────────────────
-      const totalPointsGranted = await getTotalPointsGranted(startDate, endDate);
-      const totalPointsRedeemed = await getTotalPointsRedeemed(startDate, endDate);
+      // ─── النقاط ──────────────────────────────────────────────
+      // ملاحظة معمارية (16 يوليو 2026): هذا الحساب انتقل بالكامل للسيرفر
+      // (Cloud Function: getPointsTotals) لأن قواعد الأمان لا تسمح بمسح
+      // شامل عبر دفاتر نقاط كل المستخدمين من المتصفح مباشرة. الدالة تتحقق
+      // من صلاحية الأدمن بنفسها على السيرفر قبل الحساب.
+      const functions = getFunctions(undefined, "us-central1");
+      const getPointsTotals = httpsCallable<
+        { startMs: number; endMs: number },
+        { totalGranted: number; totalRedeemed: number }
+      >(functions, "getPointsTotals");
+
+      const pointsResult = await getPointsTotals({
+        startMs: startDate.getTime(),
+        endMs: endDate.getTime(),
+      });
+
+      const totalPointsGranted = pointsResult.data.totalGranted;
+      const totalPointsRedeemed = pointsResult.data.totalRedeemed;
       const pointsCost = totalPointsRedeemed * 0.5;
 
-      // ─── أكثر فئة — باستخدام الاسم ──────────────────
+      // ─── أكثر فئة — باستخدام الاسم ───────────────────────────
       const categoryCount: Record <string, number> = {};
       bookings.forEach((b) => {
         if (b.dealCategory) {
