@@ -1,4 +1,3 @@
-
 // C:\sawa-web\components\admin\DealForm.tsx
 
 "use client";
@@ -45,7 +44,11 @@ export default function DealForm({
   vendorId,
   vendorName,
 }: DealFormProps) {
-  const { vendors } = useVendors();
+  // ملاحظة معمارية (16 يوليو 2026): تمرير enabled=!isVendor إلى useVendors —
+  // المورد لا يحتاج قائمة كل الموردين أصلاً (القائمة مخصَّصة للأدمن فقط في
+  // حقل "مقدم الخدمة" أدناه)، وجلبها كان يفشل بصلاحيات منشورة حديثاً بلا أي
+  // فائدة فعلية. الأدمن يحصل على نفس السلوك السابق تماماً (enabled=true).
+  const { vendors } = useVendors(!isVendor);
   const { run, loading } = useAsyncAction();
   const [title, setTitle] = useState(initialValues?.title ?? "");
   const [description, setDescription] = useState(initialValues?.description ?? "");
@@ -94,7 +97,7 @@ export default function DealForm({
   return (
     <div className="space-y-4">
 
-      {/* ─── اسم العرض ───────────────────────────────────── */}
+      {/* ─── اسم العرض ─────────────────────────────────── */}
       <div>
         <label className="block text-sm font-medium text-slate-700 mb-1">
           اسم العرض <span className="text-red-500">*</span>
@@ -108,7 +111,7 @@ export default function DealForm({
         />
       </div>
 
-      {/* ─── الوصف ───────────────────────────────────────── */}
+      {/* ─── الوصف ──────────────────────────────────────── */}
       <div>
         <label className="block text-sm font-medium text-slate-700 mb-1">
           الوصف <span className="text-red-500">*</span>
@@ -122,7 +125,7 @@ export default function DealForm({
         />
       </div>
 
-      {/* ─── الخصم ───────────────────────────────────────── */}
+      {/* ─── الخصم ──────────────────────────────────────── */}
       <div>
         <label className="block text-sm font-medium text-slate-700 mb-1">
           الخصم <span className="text-red-500">*</span>
@@ -136,14 +139,14 @@ export default function DealForm({
         />
       </div>
 
-      {/* ─── الصورة ──────────────────────────────────────── */}
+      {/* ─── الصورة ─────────────────────────────────────── */}
       <ImageUpload
         currentUrl={imageUrl}
         onUpload={setImageUrl}
         folder="deals"
       />
 
-      {/* ─── رابط خارجي ──────────────────────────────────── */}
+      {/* ─── رابط خارجي ─────────────────────────────────── */}
       <div>
         <label className="block text-sm font-medium text-slate-700 mb-1">
           رابط خارجي
@@ -169,7 +172,7 @@ export default function DealForm({
           className="w-full px-4 py-2.5 rounded-lg border border-slate-200 text-sm text-slate-800 focus:outline-none focus:border-[#1a3c6e] focus:ring-1 focus:ring-[#1a3c6e] transition"
         />
         <p className="text-xs text-slate-400 mt-1">
-          لو محدّدتش تاريخ، العرض هيفضل ساري لحد ما تعطّله بنفسك
+          لو محددتش تاريخ، العرض هيفضل ساري لحد ما تعطّله بنفسك
         </p>
       </div>
 
@@ -194,7 +197,7 @@ export default function DealForm({
         </div>
       )}
 
-      {/* ─── الترتيب — للأدمن فقط ────────────────────────── */}
+      {/* ─── الترتيب — للأدمن فقط ───────────────────────── */}
       {!isVendor && (
         <div>
           <label className="block text-sm font-medium text-slate-700 mb-1">
@@ -210,7 +213,7 @@ export default function DealForm({
         </div>
       )}
 
-      {/* ─── إشعار للمورد ────────────────────────────────── */}
+      {/* ─── إشعار للمورد ───────────────────────────────── */}
       {isVendor && (
         <div className="bg-amber-50 border border-amber-200 rounded-lg px-4 py-3">
           <p className="text-xs text-amber-700 font-medium">
@@ -219,12 +222,12 @@ export default function DealForm({
         </div>
       )}
 
-      {/* ─── Error ────────────────────────────────────────── */}
+      {/* ─── Error ──────────────────────────────────────── */}
       {error && (
         <p className="text-sm text-red-500 bg-red-50 px-4 py-2 rounded-lg">{error}</p>
       )}
 
-      {/* ─── Actions ──────────────────────────────────────── */}
+      {/* ─── Actions ────────────────────────────────────── */}
       <div className="flex gap-3 pt-2">
         <button
           onClick={handleSubmit}
@@ -245,4 +248,3 @@ export default function DealForm({
     </div>
   );
 }
-

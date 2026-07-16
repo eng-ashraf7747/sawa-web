@@ -13,12 +13,23 @@ interface UseVendorsReturn {
   error: string | null;
 }
 
-export const useVendors = (): UseVendorsReturn => {
+// ملاحظة معمارية (16 يوليو 2026): أُضيف بارامتر enabled (افتراضياً true) —
+// يسمح لأي مستدعٍ (مثل DealForm.tsx) بتعطيل جلب قائمة كل الموردين تماماً
+// عندما لا يكون محتاجها فعلياً (كحالة المورد نفسه)، بدل محاولة الجلب دائماً
+// وفشلها بصلاحيات منشورة حديثاً. لا تغيير على السلوك الافتراضي (enabled=true).
+export const useVendors = (enabled: boolean = true): UseVendorsReturn => {
   const [vendors, setVendors] = useState<User[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(enabled);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
+    if (!enabled) {
+      setVendors([]);
+      setLoading(false);
+      setError(null);
+      return;
+    }
+
     const q = query(
       collection(db, "users"),
       where("role", "==", "vendor"),
@@ -39,7 +50,7 @@ export const useVendors = (): UseVendorsReturn => {
     );
 
     return () => unsubscribe();
-  }, []);
+  }, [enabled]);
 
   return { vendors, loading, error };
 };
