@@ -16,7 +16,7 @@ import {
 const COLLECTION = "commission_ledger";
 const ledgerRef = () => collection(db, COLLECTION);
 
-// ─── أنواع العمولة ────────────────────────────────────────
+// ─── أنواع العمولة ─────────────────────────────────────────
 export type CommissionStatus = "pending" | "paid" | "waived";
 
 export interface CommissionEntry {
@@ -25,6 +25,8 @@ export interface CommissionEntry {
   userId: string;
   vendorId: string;
   categoryId: string;
+  dealId: string;
+  dealTitle: string;
   invoiceValue: number;
   commissionRate: number;
   commissionDue: number;
@@ -39,6 +41,8 @@ export interface AddCommissionEntryInput {
   userId: string;
   vendorId: string;
   categoryId: string;
+  dealId: string;
+  dealTitle: string;
   invoiceValue: number;
   commissionRate: number;
   commissionCap: number;
@@ -51,6 +55,8 @@ function toEntry(id: string, data: any): CommissionEntry {
     userId: data.userId,
     vendorId: data.vendorId,
     categoryId: data.categoryId ?? "",
+    dealId: data.dealId ?? "",
+    dealTitle: data.dealTitle ?? "",
     invoiceValue: data.invoiceValue ?? 0,
     commissionRate: data.commissionRate ?? 0.02,
     commissionDue: data.commissionDue ?? 0,
@@ -61,7 +67,7 @@ function toEntry(id: string, data: any): CommissionEntry {
   };
 }
 
-// ─── تسجيل عمولة جديدة ───────────────────────────────────
+// ─── تسجيل عمولة جديدة ─────────────────────────────────────
 export async function addCommissionEntry(
   input: AddCommissionEntryInput
 ): Promise <string> {
@@ -75,6 +81,8 @@ export async function addCommissionEntry(
     userId: input.userId,
     vendorId: input.vendorId,
     categoryId: input.categoryId,
+    dealId: input.dealId,
+    dealTitle: input.dealTitle,
     invoiceValue: input.invoiceValue,
     commissionRate: input.commissionRate,
     commissionDue,
@@ -87,7 +95,7 @@ export async function addCommissionEntry(
   return docRef.id;
 }
 
-// ─── جلب عمولات في فترة زمنية ────────────────────────────
+// ─── جلب عمولات في فترة زمنية ─────────────────────────────────
 export async function getCommissions(
   startDate: Date,
   endDate: Date,
@@ -108,7 +116,7 @@ export async function getCommissions(
   }
 }
 
-// ─── إجمالي العمولات المستحقة في فترة ───────────────────
+// ─── إجمالي العمولات المستحقة في فترة ─────────────────────────
 export async function getTotalCommissionDue(
   startDate: Date,
   endDate: Date
@@ -121,7 +129,7 @@ export async function getTotalCommissionDue(
   }
 }
 
-// ─── إجمالي عمولات مورد في فترة ─────────────────────────
+// ─── إجمالي عمولات مورد في فترة ─────────────────────────────────
 export async function getVendorCommissions(
   vendorId: string,
   startDate: Date,

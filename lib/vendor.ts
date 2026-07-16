@@ -4,64 +4,56 @@ import {
   collection,
   query,
   where,
-  orderBy,
   onSnapshot,
-  addDoc,
-  serverTimestamp,
 } from "firebase/firestore";
 import { db } from "@/lib/firebase";
-import { Transaction, CreateTransactionInput, VendorStats } from "@/types";
+import { VendorStats } from "@/types";
 
-const TRANSACTIONS = "transactions";
-
-// ─── Stream Transactions by Vendor ───────────────────────
-export const streamVendorTransactions = (
+// ملاحظة معمارية (16 يوليو 2026): هذا الملف كان يعتمد على مجموعة "transactions"
+// عبر streamVendorTransactions() و addTransaction()، لكن الفحص الشامل أثبت
+// عدم وجود أي مكان في المشروع بأكمله ينادي addTransaction() فعلياً — كانت
+// دالة ميتة تماماً. البيانات الحقيقية لعمليات البيع تُسجَّل في
+// "commission_ledger" (عبر lib/commissionLedger.ts، عند تسليم كل حجز فعلياً
+// في lib/bookings.ts::markDelivered). الدالتان القديمتان حُذفتا نهائياً،
+// واستُبدلتا بدالة واحدة تقرأ من المصدر الحقيقي مباشرة.
+export const streamVendorCommissionStats = (
   vendorId: string,
-  callback: (transactions: Transaction[]) => void,
+  callback: (stats: VendorStats) => void,
   onError: (error: Error) => void
 ) => {
   const q = query(
-    collection(db, TRANSACTIONS),
-    where("vendorId", "==", vendorId),
-    orderBy("timestamp", "desc")
+    collection(db, "commission_ledger"),
+    where("vendorId", "==", vendorId)
   );
 
   return onSnapshot(
     q,
     (snapshot) => {
-      callback(snapshot.docs.map((d) => ({ id: d.id, ...d.data() } as Transaction)));
+      const dealMap = new Map<string, { dealTitle: string; count: number }>();
+
+      snapshot.docs.forEach((d) => {
+        const data = d.data();
+        const dealId: string = data.dealId ?? "";
+        const dealTitle: string = data.dealTitle ?? "";
+
+        if (dealMap.has(dealId)) {
+          dealMap.get(dealId)!.count++;
+        } else {
+          dealMap.set(dealId, { dealTitle, count: 1 });
+        }
+      });
+
+      const stats: VendorStats = {
+        totalTransactions: snapshot.size,
+        dealStats: Array.from(dealMap.entries()).map(([dealId, { dealTitle, count }]) => ({
+          dealId,
+          dealTitle,
+          transactionCount: count,
+        })),
+      };
+
+      callback(stats);
     },
     onError
   );
-};
-
-// ─── Calculate Vendor Stats ───────────────────────────────
-export const calculateVendorStats = (transactions: Transaction[]): VendorStats => {
-  const dealMap = new Map<string, { dealTitle: string; count: number }>();
-
-  transactions.forEach((t) => {
-    if (dealMap.has(t.dealId)) {
-      dealMap.get(t.dealId)!.count++;
-    } else {
-      dealMap.set(t.dealId, { dealTitle: t.dealTitle, count: 1 });
-    }
-  });
-
-  return {
-    totalTransactions: transactions.length,
-    dealStats: Array.from(dealMap.entries()).map(([dealId, { dealTitle, count }]) => ({
-      dealId,
-      dealTitle,
-      transactionCount: count,
-    })),
-  };
-};
-
-// ─── Add Transaction ──────────────────────────────────────
-export const addTransaction = async (input: CreateTransactionInput): Promise<string> => {
-  const docRef = await addDoc(collection(db, TRANSACTIONS), {
-    ...input,
-    timestamp: serverTimestamp(),
-  });
-  return docRef.id;
 };

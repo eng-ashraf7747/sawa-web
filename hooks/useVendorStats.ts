@@ -4,7 +4,7 @@
 
 import { useState, useEffect } from "react";
 import { Transaction, VendorStats } from "@/types";
-import { streamVendorTransactions, calculateVendorStats } from "@/lib/vendor";
+import { streamVendorCommissionStats } from "@/lib/vendor";
 
 interface UseVendorStatsReturn {
   stats: VendorStats | null;
@@ -13,8 +13,15 @@ interface UseVendorStatsReturn {
   error: string | null;
 }
 
+// ملاحظة معمارية (16 يوليو 2026): تحديث لاستخدام streamVendorCommissionStats
+// (يقرأ من commission_ledger الحقيقي) بدل streamVendorTransactions المهجورة.
+// حقل transactions يُبقى فارغاً دائماً عمداً — صفحة "سجل العمليات"
+// (app/vendor/transactions) مصمَّمة أصلاً من المطوّر كصفحة "تحت الإنشاء"
+// بشكل بيانات مختلف تماماً (حالة حجز: مكتملة/معلّقة/ملغاة) لا يطابق حالة
+// العمولة الحقيقية (قيد الدفع/مدفوعة/معفاة). إبقاؤها فارغة يحافظ على رسالة
+// "الصفحة تحت الإنشاء والتطوير" الأصلية بدل عرض بيانات مضلِّلة.
 export const useVendorStats = (vendorId: string): UseVendorStatsReturn => {
-  const [transactions, setTransactions] = useState<Transaction[]>([]);
+  const [transactions] = useState<Transaction[]>([]);
   const [stats, setStats] = useState<VendorStats | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -22,11 +29,10 @@ export const useVendorStats = (vendorId: string): UseVendorStatsReturn => {
   useEffect(() => {
     if (!vendorId) return;
 
-    const unsubscribe = streamVendorTransactions(
+    const unsubscribe = streamVendorCommissionStats(
       vendorId,
       (data) => {
-        setTransactions(data);
-        setStats(calculateVendorStats(data));
+        setStats(data);
         setLoading(false);
       },
       (err) => {
