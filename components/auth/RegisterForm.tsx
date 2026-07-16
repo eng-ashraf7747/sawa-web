@@ -49,8 +49,9 @@ export default function RegisterForm({ onSuccess, onSwitchToLogin }: RegisterFor
     setLoading(true);
     try {
       await registerWithEmail(email, password, displayName, phone, referralCode || undefined);
+      // ملاحظة معمارية (16 يوليو 2026): تمت إزالة router.refresh() الزائدة —
+      // نفس السبب الموثَّق في LoginForm.tsx (سباق توقيت مع router.push).
       router.push("/verify-email");
-      router.refresh();
 
     } catch (err: unknown) {
       const e = err as { code?: string };
@@ -66,8 +67,8 @@ export default function RegisterForm({ onSuccess, onSwitchToLogin }: RegisterFor
     setErrors({});
     try {
       await loginWithGoogle();
+      // ملاحظة معمارية (16 يوليو 2026): نفس إزالة router.refresh() أعلاه.
       router.push("/dashboard");
-      router.refresh();
 
     } catch (err: unknown) {
       const e = err as { code?: string };

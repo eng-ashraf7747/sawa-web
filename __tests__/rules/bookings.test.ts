@@ -114,7 +114,7 @@ describe("bookings/{bookingId} — الإنشاء", () => {
 });
 
 describe("bookings/{bookingId} — التعديل", () => {
-  it("المورد يقدر يعدّل حقول التسليم المسموحة (orderValue, status, إلخ)", async () => {
+  it("الموَرد يقدر يعدّل حقول التسليم المسموحة (orderValue, status, إلخ)", async () => {
     await seedBooking();
     const vendor = testEnv.authenticatedContext("vendor-uid", {});
     await assertSucceeds(
@@ -127,7 +127,19 @@ describe("bookings/{bookingId} — التعديل", () => {
     );
   });
 
-  it("🔴 المورد ممنوع يغيّر حقل userId (إعادة تعيين الحجز لمستخدم تاني)", async () => {
+  it("المورد يقدر يلغي حجز بتاعه (نفس صلاحية المستخدم)", async () => {
+    await seedBooking();
+    const vendor = testEnv.authenticatedContext("vendor-uid", {});
+    await assertSucceeds(
+      vendor.firestore().collection("bookings").doc("booking-1").update({
+        status: "cancelled",
+        cancellationReason: "الكمية غير متوفرة حالياً",
+        cancelledAt: new Date(),
+      })
+    );
+  });
+
+  it("🔴 الموَرد ممنوع يغيّر حقل userId (إعادة تعيين الحجز لمستخدم تاني)", async () => {
     await seedBooking();
     const vendor = testEnv.authenticatedContext("vendor-uid", {});
     await assertFails(

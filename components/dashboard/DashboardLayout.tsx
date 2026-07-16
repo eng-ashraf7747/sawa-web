@@ -1,4 +1,3 @@
-
 // C:\sawa-web\components\dashboard\DashboardLayout.tsx
 
 "use client";
@@ -236,6 +235,7 @@ export default function DashboardLayout({ initialCategoryId }: DashboardLayoutPr
   const { userData, loading } = useUser();
   const { categories } = useActiveCategories();
   const { bookings } = useUserBookings();
+  const [showReloadHint, setShowReloadHint] = useState(false);
 
   const [activePage, setActivePage] = useState<ActiveSection>(initialCategoryId ? "deals" : "home");
   const [selectedCategoryId, setSelectedCategoryId] = useState<string | null>(initialCategoryId ?? null);
@@ -256,12 +256,29 @@ export default function DashboardLayout({ initialCategoryId }: DashboardLayoutPr
     setSelectedCategoryId(categoryId);
   }, []);
 
+  // شبكة أمان (16 يوليو 2026): نفس المبدأ الموثَّق في app/dashboard/page.tsx —
+  // مهلة 6 ثوانٍ قبل عرض خيار إعادة تحميل يدوي، بدون أي تأثير على المسار
+  // الناجح (المؤقّت يُلغى فور اكتمال التحميل بنجاح).
+  useEffect(() => {
+    if (!loading) return;
+    const timer = setTimeout(() => setShowReloadHint(true), 6000);
+    return () => clearTimeout(timer);
+  }, [loading]);
+
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-[#f0f4f8]">
         <div className="flex flex-col items-center gap-4">
           <div className="w-12 h-12 border-4 border-[#1a3c6e] border-t-[#c9a84c] rounded-full animate-spin" />
           <p className="text-[#1a3c6e] font-semibold">جاري التحميل...</p>
+          {showReloadHint && (
+            <button
+              onClick={() => window.location.reload()}
+              className="text-sm text-[#1a3c6e] font-semibold underline cursor-pointer"
+            >
+              الصفحة بتاخد وقت أطول من المعتاد — اضغط هنا لإعادة التحميل
+            </button>
+          )}
         </div>
       </div>
     );

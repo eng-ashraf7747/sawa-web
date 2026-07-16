@@ -24,10 +24,10 @@ import {
 
 const googleProvider = new GoogleAuthProvider();
 
-// ─── ثوابت النقاط ────────────────────────────────────────────
+// ─── ثوابت النقاط ─────────────────────────────────────────
 const SIGNUP_BONUS_POINTS = 25;
 
-// ─── حفظ مستخدم جديد بالإيميل ────────────────────────────────
+// ─── حفظ مستخدم جديد بالإيميل ─────────────────────────────
 const saveNewEmailUser = async (
   user: User,
   extra: {
@@ -57,7 +57,7 @@ const saveNewEmailUser = async (
   }, { merge: true });
 };
 
-// ─── حفظ مستخدم Google ────────────────────────────────────────
+// ─── حفظ مستخدم Google ────────────────────────────────────
 const saveGoogleUser = async (user: User) => {
   const userRef = doc(db, "users", user.uid);
   await setDoc(userRef, {
@@ -78,7 +78,7 @@ const saveGoogleUser = async (user: User) => {
   }, { merge: true });
 };
 
-// ─── Login ────────────────────────────────────────────────────
+// ─── Login ─────────────────────────────────────────────────
 export const loginWithEmail = async (email: string, password: string) => {
   const credential = await signInWithEmailAndPassword(auth, email, password);
 
@@ -91,7 +91,7 @@ export const loginWithEmail = async (email: string, password: string) => {
   return credential;
 };
 
-// ─── Register ─────────────────────────────────────────────────
+// ─── Register ──────────────────────────────────────────────
 export const registerWithEmail = async (
   email: string,
   password: string,
@@ -127,28 +127,38 @@ export const registerWithEmail = async (
   return credential;
 };
 
-// ─── Google Sign-In ─────────────────────────────────────────────
+// ─── Google Sign-In ────────────────────────────────────────
+// ملاحظة معمارية (16 يوليو 2026): saveGoogleUser وtrackEvent كانا يُنتظَران
+// (await) بالكامل قبل إرجاع النتيجة، مما يضيف زمن انتظار إضافي قبل انتقال
+// المتصفح للصفحة التالية. هذا التأخير كان يزيد فرصة وقوع سباق توقيت في
+// LoginForm.tsx بين الانتقال وإعادة التحميل الزائدة (التي أُزيلت الآن أيضاً)،
+// وهو ما فسّر ظهور المشكلة مع جوجل تحديداً دون الإيميل. الكتابة والتتبع الآن
+// يعملان في الخلفية دون حجب الانتقال؛ أي خطأ فيهما يُسجَّل فقط، لأن
+// useUser.ts (عبر onSnapshot) يستقبل أي تحديث لاحق تلقائياً بمجرد اكتماله.
 export const loginWithGoogle = async () => {
   captureTrafficSource();
 
   const credential = await signInWithPopup(auth, googleProvider);
-  await saveGoogleUser(credential.user);
 
-  await trackEvent({
+  saveGoogleUser(credential.user).catch((error) => {
+    console.error("saveGoogleUser error:", error);
+  });
+
+  trackEvent({
     eventType: "user_logged_in",
     userId: credential.user.uid,
     pointsChange: SIGNUP_BONUS_POINTS,
     metadata: { method: "google" },
-  });
+  }).catch(() => {});
 
   return credential;
 };
 
-// ─── Logout ───────────────────────────────────────────────────
+// ─── Logout ────────────────────────────────────────────────
 export const logout = async () => {
   await signOut(auth);
 };
 
-// ─── إعادة تعيين كلمة المرور ──────────────────────────────────
+// ─── إعادة تعيين كلمة المرور ───────────────────────────────
 export const forgotPassword = (email: string) =>
   sendPasswordResetEmail(auth, email);

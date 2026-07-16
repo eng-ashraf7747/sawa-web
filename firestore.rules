@@ -81,9 +81,15 @@ service cloud.firestore {
       allow create: if isUserOfDoc(request.resource.data) &&
         request.resource.data.status == "pending";
 
+      // ملاحظة معمارية (14-15 يوليو 2026 → مصحَّحة 16 يوليو 2026):
+      // زر "إلغاء" في واجهة المورد (VendorBookingCard.tsx) كان يستدعي cancelBooking()
+      // التي تكتب دائماً 3 حقول معاً: status + cancellationReason + cancelledAt.
+      // قائمة حقول المورد كانت ناقصة cancellationReason وcancelledAt، فكانت أي محاولة
+      // إلغاء من المورد تُرفض بالكامل (Missing or insufficient permissions) رغم وجود
+      // الزر فعلياً في الواجهة. تمت إضافة الحقلين هنا فقط — لا تغيير على صلاحية المستخدم.
       allow update: if isAdmin() ||
         (isVendorOfDoc(resource.data) &&
-          onlyUpdatingFields(["status", "orderValue", "commission", "vendorPoints", "deliveredAt"])) ||
+          onlyUpdatingFields(["status", "orderValue", "commission", "vendorPoints", "deliveredAt", "cancellationReason", "cancelledAt"])) ||
         (isUserOfDoc(resource.data) &&
           onlyUpdatingFields(["status", "completedAt", "cancellationReason", "cancelledAt"]));
 

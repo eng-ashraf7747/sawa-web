@@ -43,8 +43,10 @@ export default function LoginForm({ onSuccess, onSwitchToRegister, onForgotPassw
     setError("");
     try {
       await loginWithEmail(email, password);
+      // ملاحظة معمارية (16 يوليو 2026): تمت إزالة router.refresh() الزائدة —
+      // كانت تسبب سباق توقيت مع router.push يعلّق الانتقال أحياناً. المحتوى
+      // كله عميل (Client-Side) مبني على Firebase Listeners، فلا داعي لها.
       router.push("/dashboard");
-      router.refresh();
     } catch (err: unknown) {
       const e = err as { code?: string };
       setError(mapAuthError(e.code ?? ""));
@@ -58,8 +60,10 @@ export default function LoginForm({ onSuccess, onSwitchToRegister, onForgotPassw
     setError("");
     try {
       await loginWithGoogle();
+      // ملاحظة معمارية (16 يوليو 2026): نفس إزالة router.refresh() أعلاه —
+      // هنا كانت أهم لأن مسار جوجل أبطأ زمنياً (Popup + كتابة Firestore)،
+      // مما يزيد فرصة وقوع السباق مقارنة بمسار الإيميل.
       router.push("/dashboard");
-      router.refresh();
     } catch (err: unknown) {
       const e = err as { code?: string };
       setError(mapAuthError(e.code ?? "auth/popup-closed-by-user"));
