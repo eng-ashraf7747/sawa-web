@@ -59,7 +59,7 @@ export default function RequestModal({
   const handleSubmit = async () => {
     setValidationError(null);
     if (!selectedCategoryId) { setValidationError("اختر فئة"); return; }
-    if (!selectedSubcategoryId) { setValidationError("اختر فئة فرعية"); return; }
+    if (subcategories.length > 0 && !selectedSubcategoryId) { setValidationError("اختر فئة فرعية"); return; }
     if (!title.trim()) { setValidationError("اكتب عنوان الطلب"); return; }
 
     await run(async () => {
