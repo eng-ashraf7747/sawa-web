@@ -269,6 +269,7 @@ export default function VendorDealsPage() {
                 isVendor={true}
                 vendorId={vendorId ?? undefined}
                 vendorName={userData?.displayName ?? undefined}
+                vendorCity={userData?.city}
               />
             )}
           </div>

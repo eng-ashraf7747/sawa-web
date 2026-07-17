@@ -17,6 +17,8 @@ interface DealFormProps {
   isVendor?: boolean;
   vendorId?: string;
   vendorName?: string;
+  vendorCity?: string;
+
 }
 
 /**
@@ -43,6 +45,7 @@ export default function DealForm({
   isVendor = false,
   vendorId,
   vendorName,
+  vendorCity,
 }: DealFormProps) {
   // ملاحظة معمارية (16 يوليو 2026): تمرير enabled=!isVendor إلى useVendors —
   // المورد لا يحتاج قائمة كل الموردين أصلاً (القائمة مخصَّصة للأدمن فقط في
@@ -77,6 +80,8 @@ export default function DealForm({
           vendorName: isVendor
             ? vendorName ?? null
             : selectedVendor?.displayName ?? null,
+          city: isVendor ? vendorCity ?? "fayoum" : selectedVendor?.city ?? "fayoum",
+
           title: title.trim(),
           description: description.trim(),
           discount: discount.trim(),

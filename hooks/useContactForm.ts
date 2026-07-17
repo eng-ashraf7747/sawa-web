@@ -68,6 +68,7 @@ export function useContactForm() {
       ...prev,
       name: userData.displayName ?? "",
       method: "whatsapp",
+      city: userData.city ?? "",
       contactValue:
         userData.role === "vendor"
           ? vendorProfile?.whatsapp ?? ""

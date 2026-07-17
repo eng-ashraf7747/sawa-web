@@ -38,6 +38,7 @@ function toRequest(id: string, data: any): Request {
     subcategoryName: data.subcategoryName ?? "",
     title: data.title ?? "",
     description: data.description ?? "",
+    city: data.city ?? "fayoum",
     status: data.status ?? "pending",
     interestedCount: data.interestedCount ?? 1,
     createdAt: (data.createdAt as Timestamp)?.toDate() ?? new Date(),

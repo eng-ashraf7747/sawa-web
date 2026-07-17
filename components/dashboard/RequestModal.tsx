@@ -13,6 +13,7 @@ import { MAX_REQUESTS_PER_USER } from "@/types/request";
 interface Props {
   userId: string;
   userName: string;
+  userCity: string;
   remaining: number;
   onClose: () => void;
   onSubmitted: () => void;
@@ -21,6 +22,7 @@ interface Props {
 export default function RequestModal({
   userId,
   userName,
+  userCity,
   remaining,
   onClose,
   onSubmitted,
@@ -64,6 +66,7 @@ export default function RequestModal({
       const result = await submit({
         userId,
         userName,
+        city: userCity,
         categoryId: selectedCategoryId,
         categoryName: selectedCategoryName,
         subcategoryId: selectedSubcategoryId,

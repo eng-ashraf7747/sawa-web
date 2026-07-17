@@ -10,6 +10,7 @@ import RequestModal from "./RequestModal";
 interface Props {
   userId: string;
   userName: string;
+  userCity: string;
 }
 
 const RequestCard = ({
@@ -60,7 +61,7 @@ const RequestCard = ({
   </div>
 );
 
-export default function RequestsSection({ userId, userName }: Props) {
+export default function RequestsSection({ userId, userName, userCity }: Props) {
   const { requests, activeCount, remaining, loading, error, reload } = useUserRequests(userId);
   const { remove, loading: removing } = useRequestActions();
   const [showModal, setShowModal] = useState(false);
@@ -130,6 +131,7 @@ export default function RequestsSection({ userId, userName }: Props) {
         <RequestModal
           userId={userId}
           userName={userName}
+          userCity={userCity}
           remaining={remaining}
           onClose={() => setShowModal(false)}
           onSubmitted={reload}

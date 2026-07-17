@@ -7,6 +7,7 @@ export interface Deal {
   categoryId: string;
   vendorId?: string | null;
   vendorName?: string | null;
+  city: string;
   title: string;
   description: string;
   imageUrl?: string | null;

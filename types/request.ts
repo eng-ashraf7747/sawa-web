@@ -6,6 +6,7 @@ export interface Request {
   id: string;
   userId: string;
   userName: string;
+  city: string;
   categoryId: string;
   categoryName: string;
   subcategoryId: string;
@@ -22,6 +23,7 @@ export interface Request {
 export interface CreateRequestInput {
   userId: string;
   userName: string;
+  city: string;
   categoryId: string;
   categoryName: string;
   subcategoryId: string;

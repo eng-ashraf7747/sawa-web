@@ -195,7 +195,7 @@ function MainContent({
   }
 
   if (activeSection === "requests") {
-    return <>{statsBar}<RequestsSection userId={userData?.uid ?? ""} userName={userData?.displayName ?? ""} /></>;
+    return <>{statsBar}<RequestsSection userId={userData?.uid ?? ""} userName={userData?.displayName ?? ""} userCity={userData?.city ?? "fayoum"} /></>;
   }
 
   if (activeSection === "points") {
@@ -225,7 +225,7 @@ function MainContent({
       {statsBar}
       <div className="flex flex-col md:flex-row gap-6">
         <CategoryGrid columns={2} onSelectCategory={onSelectCategoryFromHome} />
-        <RequestsSection userId={userData?.uid ?? ""} userName={userData?.displayName ?? ""} />
+        <RequestsSection userId={userData?.uid ?? ""} userName={userData?.displayName ?? ""} userCity={userData?.city ?? "fayoum"} />
       </div>
     </>
   );

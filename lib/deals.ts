@@ -49,6 +49,7 @@ function toDeal(id: string, data: any): Deal {
     order: data.order ?? 1,
     createdAt: (data.createdAt as Timestamp)?.toDate() ?? new Date(),
     updatedAt: (data.updatedAt as Timestamp)?.toDate() ?? new Date(),
+    city: data.city ?? "fayoum",
   };
 }
 
