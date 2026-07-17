@@ -1,4 +1,3 @@
-
 // C:\sawa-web\app\vendor\deals\page.tsx
 
 "use client";
@@ -10,7 +9,8 @@ import { useVendorDeals } from "@/hooks/useDeals";
 import { useActiveCategories } from "@/hooks/useCategories";
 import { addDeal, updateDeal, toggleDealActive, deleteDeal } from "@/lib/deals";
 import { useAsyncAction } from "@/hooks/useAsyncAction";
-import { Deal, CreateDealInput, DEAL_STATUS_LABELS, formatDealExpiryLabel } from "@/types/deal";
+import { formatDateToLocal } from "@/lib/bookings";
+import { Deal, CreateDealInput, DealStatus, DEAL_STATUS_LABELS, formatDealExpiryLabel } from "@/types/deal";
 import VendorLayout from "@/components/vendor/VendorLayout";
 import DealForm from "@/components/admin/DealForm";
 
@@ -30,7 +30,7 @@ type ModalMode = "add" | "edit" | null;
  *
  * مُغلَّفة بـ useAsyncAction الخاص بها (وليس هوك مشترك على مستوى الصفحة)
  * بنفس نمط DealCard.tsx للأدمن تماماً، عشان كل بطاقة تدير حالة تحميلها
- * لوحدها ولا تُعطِّل بقية البطاقات أثناء تنفيذ إجراء عليها
+ * لوحدها ولا تعطّل بقية البطاقات أثناء تنفيذ إجراء عليها
  */
 function VendorDealCard({
   deal,
@@ -142,6 +142,29 @@ export default function VendorDealsPage() {
   const [editTarget, setEditTarget] = useState<Deal | null>(null);
   const [selectedCategoryId, setSelectedCategoryId] = useState<string>("");
 
+  // ─── فلاتر شاشة "عروضي" (16 يوليو 2026) ─────────────────────
+  const [statusFilter, setStatusFilter] = useState<DealStatus | "all">("all");
+  const [dateFrom, setDateFrom] = useState<string>("");
+  const [dateTo, setDateTo] = useState<string>("");
+
+  const filteredDeals = deals.filter((deal) => {
+    if (statusFilter !== "all" && deal.status !== statusFilter) return false;
+
+    const dealDateStr = formatDateToLocal(deal.createdAt);
+    if (dateFrom && dealDateStr < dateFrom) return false;
+    if (dateTo && dealDateStr > dateTo) return false;
+
+    return true;
+  });
+
+  const hasActiveFilters = statusFilter !== "all" || dateFrom !== "" || dateTo !== "";
+
+  const clearFilters = () => {
+    setStatusFilter("all");
+    setDateFrom("");
+    setDateTo("");
+  };
+
   const handleAdd = async (data: CreateDealInput) => {
     await addDeal(data);
     setModalMode(null);
@@ -179,7 +202,7 @@ export default function VendorDealsPage() {
   return (
     <VendorLayout title="عروضي">
 
-      {/* ─── Header ──────────────────────────────────────── */}
+      {/* ─── Header ─────────────────────────────────────────── */}
       <div className="flex items-center justify-between mb-4 md:mb-6">
         <div>
           <h2 className="text-base font-bold text-[#0f172a]">عروضي</h2>
@@ -197,7 +220,53 @@ export default function VendorDealsPage() {
         </button>
       </div>
 
-      {/* ─── Deals List ──────────────────────────────────── */}
+      {/* ─── شريط الفلاتر ───────────────────────────────────── */}
+      <div className="bg-white rounded-xl shadow-sm border border-slate-100 p-3 md:p-4 mb-4 flex flex-wrap items-end gap-3">
+        <div>
+          <label className="text-xs font-medium text-slate-500 mb-1 block">الحالة</label>
+          <select
+            value={statusFilter}
+            onChange={(e) => setStatusFilter(e.target.value as DealStatus | "all")}
+            className="text-sm border border-slate-200 rounded-lg px-3 py-2 focus:outline-none focus:border-[#1a3c6e] bg-white"
+          >
+            <option value="all">الكل</option>
+            {Object.entries(DEAL_STATUS_LABELS).map(([value, label]) => (
+              <option key={value} value={value}>{label}</option>
+            ))}
+          </select>
+        </div>
+
+        <div>
+          <label className="text-xs font-medium text-slate-500 mb-1 block">من تاريخ</label>
+          <input
+            type="date"
+            value={dateFrom}
+            onChange={(e) => setDateFrom(e.target.value)}
+            className="text-sm border border-slate-200 rounded-lg px-3 py-2 focus:outline-none focus:border-[#1a3c6e]"
+          />
+        </div>
+
+        <div>
+          <label className="text-xs font-medium text-slate-500 mb-1 block">إلى تاريخ</label>
+          <input
+            type="date"
+            value={dateTo}
+            onChange={(e) => setDateTo(e.target.value)}
+            className="text-sm border border-slate-200 rounded-lg px-3 py-2 focus:outline-none focus:border-[#1a3c6e]"
+          />
+        </div>
+
+        {hasActiveFilters && (
+          <button
+            onClick={clearFilters}
+            className="text-xs text-[#1a3c6e] font-semibold hover:underline mb-2"
+          >
+            مسح الفلاتر
+          </button>
+        )}
+      </div>
+
+      {/* ─── Deals List ────────────────────────────────────── */}
       <div className="bg-white rounded-xl shadow-sm border border-slate-100 p-4 md:p-6">
         {dealsLoading ? (
           <div className="space-y-3">
@@ -211,16 +280,22 @@ export default function VendorDealsPage() {
             <p className="text-sm font-medium">لا توجد عروض بعد</p>
             <p className="text-xs mt-1">اضغط "إضافة عرض" لإنشاء أول عرض</p>
           </div>
+        ) : filteredDeals.length === 0 ? (
+          <div className="flex flex-col items-center py-12 md:py-16 text-slate-400">
+            <span className="text-5xl mb-4">🔍</span>
+            <p className="text-sm font-medium">لا توجد عروض تطابق الفلتر المحدد</p>
+            <p className="text-xs mt-1">جرب تغيير الحالة أو الفترة الزمنية</p>
+          </div>
         ) : (
           <div className="space-y-3">
-            {deals.map((deal) => (
+            {filteredDeals.map((deal) => (
               <VendorDealCard key={deal.id} deal={deal} onEdit={openEdit} />
             ))}
           </div>
         )}
       </div>
 
-      {/* ─── Modal ───────────────────────────────────────── */}
+      {/* ─── Modal ─────────────────────────────────────────── */}
       {modalMode && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4">
           <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md p-4 md:p-6 max-h-[90vh] overflow-y-auto">
@@ -238,7 +313,7 @@ export default function VendorDealsPage() {
               </button>
             </div>
 
-            {/* ─── اختيار الفئة عند الإضافة ──────────────── */}
+            {/* ─── اختيار الفئة عند الإضافة ─────────────────── */}
             {modalMode === "add" && !selectedCategoryId && (
               <div className="space-y-3">
                 <p className="text-sm font-medium text-slate-700 mb-3">اختر الفئة:</p>
@@ -258,7 +333,7 @@ export default function VendorDealsPage() {
               </div>
             )}
 
-            {/* ─── فورم العرض ─────────────────────────────── */}
+            {/* ─── فورم العرض ─────────────────────────────────── */}
             {(selectedCategoryId || modalMode === "edit") && (
               <DealForm
                 categoryId={modalMode === "add" ? selectedCategoryId : editTarget!.categoryId}
