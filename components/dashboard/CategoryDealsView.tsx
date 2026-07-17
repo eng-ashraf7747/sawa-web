@@ -211,7 +211,7 @@ interface CategoryDealsViewProps {
 
 export default function CategoryDealsView({ categoryId, onBack }: CategoryDealsViewProps) {
   const { userData } = useUser();
-  const { deals, loading, error } = useActiveDeals(categoryId);
+  const { deals, loading, error } = useActiveDeals(categoryId, userData?.city ?? "fayoum");
   const { categories } = useActiveCategories();
   const { bookings } = useUserBookings();
 

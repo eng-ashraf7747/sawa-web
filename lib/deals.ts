@@ -148,6 +148,7 @@ export const streamPendingDeals = (
 // ─── Stream Active Deals by Category (User) ──────────────
 export const streamActiveDealsByCategory = (
   categoryId: string,
+  city: string,
   callback: (deals: Deal[]) => void,
   onError: (error: Error) => void
 ) => {
@@ -155,6 +156,7 @@ export const streamActiveDealsByCategory = (
     dealsRef(),
     where("categoryId", "==", categoryId),
     where("status", "==", "active"),
+    where("city", "==", city),
     orderBy("order", "asc")
   );
   return onSnapshot(

@@ -37,20 +37,22 @@ export const useAllDeals = (categoryId: string): UseDealsReturn => {
 };
 
 // ─── User: العروض النشطة فقط تحت فئة ────────────────────
-export const useActiveDeals = (categoryId: string): UseDealsReturn => {
+export const useActiveDeals = (categoryId: string, city: string): UseDealsReturn => {
   const [deals, setDeals] = useState<Deal[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    if (!categoryId) return;
+    if (!categoryId || !city) return;
     const unsubscribe = streamActiveDealsByCategory(
       categoryId,
+      city,
+
       (data) => { setDeals(data); setLoading(false); },
       (err) => { console.error("خطأ في جلب العروض النشطة:", err); setError("حدث خطأ في جلب العروض"); setLoading(false); }
     );
     return () => unsubscribe();
-  }, [categoryId]);
+  }, [categoryId, city]);
 
   return { deals, loading, error };
 };
