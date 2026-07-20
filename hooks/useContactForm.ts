@@ -46,7 +46,9 @@ export function useContactForm() {
   const prefilledRef = useRef<string | null>(null);
   const { run, loading: submitting, error, clearError } = useAsyncAction();
 
-  const senderType: ContactMessageSenderType = !userData
+const senderType: ContactMessageSenderType = userLoading
+    ? "user"
+    : !userData
     ? "guest"
     : userData.role === "vendor"
     ? "vendor"
