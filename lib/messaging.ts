@@ -1,7 +1,8 @@
 // lib/messaging.ts
 
 import { getMessaging, getToken, isSupported } from "firebase/messaging";
-import app from "./firebase";
+import { doc, setDoc, serverTimestamp } from "firebase/firestore";
+import app, { db } from "./firebase";
 
 const VAPID_KEY = process.env.NEXT_PUBLIC_FIREBASE_VAPID_KEY;
 
@@ -28,4 +29,17 @@ export async function requestNotificationPermissionAndToken(): Promise<string | 
     console.error("خطأ في الحصول على توكن الإشعارات:", error);
     return null;
   }
+}
+
+// ─── حفظ توكن الجهاز مرتبط بحساب المستخدم ───────────────────
+// ملاحظة تصميم: معرّف المستند هو التوكن نفسه (لا id عشوائي) — عشان
+// لو نفس الجهاز طلب توكن مطابق تاني بالغلط، يستبدل نفسه تلقائياً
+// (Idempotent) بدل ما يتكرر كسجل منفصل في قاعدة البيانات.
+export async function saveDeviceToken(uid: string, token: string): Promise<void> {
+  const tokenRef = doc(db, "users", uid, "deviceTokens", token);
+  await setDoc(tokenRef, {
+    token,
+    createdAt: serverTimestamp(),
+    platform: typeof navigator !== "undefined" ? navigator.userAgent : "unknown",
+  });
 }

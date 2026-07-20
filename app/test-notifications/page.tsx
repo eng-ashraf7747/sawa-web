@@ -3,19 +3,34 @@
 "use client";
 
 import { useState } from "react";
-import { requestNotificationPermissionAndToken } from "@/lib/messaging";
+import { requestNotificationPermissionAndToken, saveDeviceToken } from "@/lib/messaging";
+import { useUser } from "@/hooks/useUser";
 
 export default function TestNotificationsPage() {
+  const { userData } = useUser();
   const [token, setToken] = useState<string | null>(null);
   const [status, setStatus] = useState<string>("");
 
   const handleClick = async () => {
+    if (!userData) {
+      setStatus("لازم تكون مسجَّل دخول الأول");
+      return;
+    }
+
     setStatus("جاري الطلب...");
     const result = await requestNotificationPermissionAndToken();
 
     if (result) {
       setToken(result);
-      setStatus("تم بنجاح ✅");
+      setStatus("جاري الحفظ...");
+
+      try {
+        await saveDeviceToken(userData.uid, result);
+        setStatus("تم بنجاح — التوكن اتحفظ في حسابك ✅");
+      } catch (error) {
+        console.error("خطأ في حفظ التوكن:", error);
+        setStatus("التوكن اتاخد بنجاح، لكن فشل حفظه — راجع الكونسول (F12)");
+      }
     } else {
       setStatus("فشل — راجع الكونسول (F12) لمعرفة السبب");
     }
