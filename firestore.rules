@@ -64,7 +64,15 @@ service cloud.firestore {
       allow create: if isOwner(userId) &&
         request.resource.data.role == "user";
 
-      allow update: if (isOwner(userId) && fieldUnchanged("role")) || isAdmin();
+      // ملاحظة معمارية (16 يوليو 2026): إضافة حماية حقل المدينة للتوسع
+      // الجغرافي المستقبلي — المستخدم العادي والأدمن أحرار في تغيير مدينتهم
+      // براحتهم، لكن المورد ممنوع من تغيير مدينته بنفسه لأنها مرتبطة بتحقق
+      // هوية بشري فعلي تم مسبقاً من الأدمن — أي تغيير مستقبلي لمدينة المورد
+      // يمر عبر الأدمن فقط، بنفس منطق حماية حقل role تماماً.
+      allow update: if isAdmin() ||
+        (isOwner(userId) &&
+          fieldUnchanged("role") &&
+          (resource.data.role != "vendor" || fieldUnchanged("city")));
 
       allow delete: if false;
 
@@ -81,9 +89,6 @@ service cloud.firestore {
       allow create: if isUserOfDoc(request.resource.data) &&
         request.resource.data.status == "pending";
 
-      // ملاحظة معمارية (16 يوليو 2026): زر "إلغاء" في واجهة المورد كان يستدعي
-      // cancelBooking() التي تكتب status + cancellationReason + cancelledAt
-      // معاً، وقائمة حقول المورد كانت ناقصة الحقلين الأخيرين. أُضيفا هنا فقط.
       allow update: if isAdmin() ||
         (isVendorOfDoc(resource.data) &&
           onlyUpdatingFields(["status", "orderValue", "commission", "vendorPoints", "deliveredAt", "cancellationReason", "cancelledAt"])) ||
@@ -130,16 +135,18 @@ service cloud.firestore {
       allow read: if true;
       allow create, update, delete: if isAdmin();
 
-      // ملاحظة معمارية (16 يوليو 2026): الفئات الفرعية (subcategories) مجموعة
-      // فرعية منفصلة، فلا ترث صلاحيات المستند الأب تلقائياً في Firestore.
-      // كانت غير مُعرَّفة إطلاقاً، فأي قراءة أو كتابة لها كانت تُرفض بالكامل —
-      // حتى مجرد جلبها تلقائياً في الخلفية عند فتح أي فئة رئيسية. نفس سياسة
-      // الفئة الرئيسية بالضبط: قراءة عامة، وتعديل للأدمن فقط.
       match /subcategories/{subcategoryId} {
         allow read: if true;
         allow create, update, delete: if isAdmin();
       }
     }
+
+    // 5.1 cities/{cityId}
+    match /cities/{cityId} {
+      allow read: if true;
+      allow create, update, delete: if isAdmin();
+    }
+
 
     // 6. commission_ledger/{entryId}
     match /commission_ledger/{entryId} {

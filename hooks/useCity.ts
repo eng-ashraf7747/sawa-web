@@ -1,13 +1,18 @@
 "use client";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { City } from "@/types";
-import { CITIES } from "@/constants";
+import { useCities } from "@/hooks/useCities";
 
 export const useCity = () => {
-  const [selectedCity, setSelectedCity] = useState<City>(
-    CITIES.find((c) => c.available) ?? CITIES[0]
-  );
+  const { cities } = useCities();
+  const [selectedCity, setSelectedCity] = useState<City | null>(null);
   const [cityOpen, setCityOpen] = useState(false);
+
+  useEffect(() => {
+    if (!selectedCity && cities.length > 0) {
+      setSelectedCity(cities.find((c) => c.available) ?? cities[0]);
+    }
+  }, [cities, selectedCity]);
 
   const selectCity = (city: City) => {
     if (city.available) {
@@ -21,6 +26,6 @@ export const useCity = () => {
     cityOpen,
     setCityOpen,
     selectCity,
-    cities: CITIES,
+    cities,
   };
 };

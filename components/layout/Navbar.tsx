@@ -34,7 +34,7 @@ export default function Navbar({ onLoginClick }: NavbarProps) {
       {/* ANNOUNCEMENT BAR — relative z-[60] + -mb-px: يطغى شعرة على حافة الـ nav لمنع أي بليد من اللوجو */}
       <div className="relative z-[60] -mb-px bg-[#0d2447] text-white/75 text-center py-2 px-4 text-xs tracking-wide">
         🌍 SAWA متاحة دلوقتي في{" "}
-        <span className="text-[#f0d980] font-semibold">{selectedCity.nameAr}</span>{" "}
+        <span className="text-[#f0d980] font-semibold">{selectedCity?.nameAr ?? "الفيوم"}</span>{" "}
         — وقريباً في محافظات أكتر
       </div>
 
@@ -74,7 +74,7 @@ export default function Navbar({ onLoginClick }: NavbarProps) {
               <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7z"/>
               <circle cx="12" cy="9" r="2.5"/>
             </svg>
-            {selectedCity.nameAr}
+            {selectedCity?.nameAr ?? "الفيوم"}
             <svg className="w-3 h-3 text-[#6b7280]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
               <path d="M6 9l6 6 6-6"/>
             </svg>
@@ -158,11 +158,11 @@ export default function Navbar({ onLoginClick }: NavbarProps) {
                   setCityOpen(false);
                 }}
                 className={`w-full flex items-center justify-between px-3 py-2.5 rounded-lg cursor-pointer transition-colors text-right focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#1a3c6e] ${
-                  city.id === selectedCity.id ? "bg-blue-50" : "hover:bg-[#f8f9fb]"
+                  city.id === selectedCity?.id ? "bg-blue-50" : "hover:bg-[#f8f9fb]"
                 }`}
               >
                 <span className="text-sm text-[#111827]">{city.nameAr}</span>
-                {city.id === selectedCity.id && <span className="text-[#1a3c6e]">✓</span>}
+                {city.id === selectedCity?.id && <span className="text-[#1a3c6e]">✓</span>}
                 {!city.available && (
                   <span className="text-[10px] bg-[#f8f9fb] text-[#6b7280] px-1.5 py-0.5 rounded-full font-bold">
                     قريباً
