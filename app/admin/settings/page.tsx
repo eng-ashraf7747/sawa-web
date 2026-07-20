@@ -5,6 +5,9 @@
 import { useState } from "react";
 import { useAdminGuard } from "@/hooks/useAdminGuard";
 import { useCities } from "@/hooks/useCities";
+import { toggleCityActive } from "@/lib/cities";
+import { useAsyncAction } from "@/hooks/useAsyncAction";
+import { City } from "@/types";
 import AdminLayout from "@/components/admin/AdminLayout";
 
 type SettingsSection = "cities" | "managers" | "commission" | "points";
@@ -47,9 +50,47 @@ function SectionUnderConstruction({ label }: { label: string }) {
 }
 
 /**
- * محتوى قسم "إدارة المحافظات" — عرض للقراءة فقط في هذه المرحلة (الهيكل العام).
- * أزرار التفعيل/التعطيل الفعلية تُضاف في الخطوة التالية من نفس الخطة.
+ * صف محافظة واحد — مُغلَّف بـ useAsyncAction الخاص به (نفس نمط VendorDealCard)
+ * عشان كل صف يدير حالة تحميله بنفسه ولا يعطّل بقية الصفوف أثناء التبديل
  */
+function CityRow({ city }: { city: City }) {
+  const { run, loading } = useAsyncAction();
+
+  const handleToggle = async () => {
+    await run(async () => {
+      await toggleCityActive(city.id, city.available);
+    });
+  };
+
+  return (
+    <div className="flex items-center justify-between bg-slate-50 border border-slate-100 rounded-xl px-4 py-3">
+      <span className="text-sm font-medium text-slate-700">{city.nameAr}</span>
+      <div className="flex items-center gap-3">
+        <span
+          className={`text-[10px] font-bold px-2.5 py-1 rounded-full ${
+            city.available
+              ? "bg-green-100 text-green-700"
+              : "bg-slate-100 text-slate-500"
+          }`}
+        >
+          {city.available ? "نشطة" : "قريباً"}
+        </span>
+        <button
+          onClick={handleToggle}
+          disabled={loading}
+          className={`text-xs px-3 py-1.5 rounded-lg disabled:opacity-50 transition ${
+            city.available
+              ? "bg-red-50 text-red-500 hover:bg-red-100"
+              : "bg-green-50 text-green-600 hover:bg-green-100"
+          }`}
+        >
+          {loading ? "..." : city.available ? "تعطيل" : "تفعيل"}
+        </button>
+      </div>
+    </div>
+  );
+}
+
 function CitiesSection() {
   const { cities, loading } = useCities();
 
@@ -65,25 +106,11 @@ function CitiesSection() {
     <div>
       <h2 className="text-base font-bold text-[#0d2447] mb-1">إدارة المحافظات</h2>
       <p className="text-sm text-[#6b7280] mb-6">
-        قائمة المحافظات المتاحة للمنصة حالياً
+        فعّل أو عطّل أي محافظة — التعطيل يمنع اختيارها من مستخدمين أو موردين جدد فقط، ولا يؤثر على أي حساب مسجَّل بها بالفعل
       </p>
       <div className="space-y-2">
         {cities.map((city) => (
-          <div
-            key={city.id}
-            className="flex items-center justify-between bg-slate-50 border border-slate-100 rounded-xl px-4 py-3"
-          >
-            <span className="text-sm font-medium text-slate-700">{city.nameAr}</span>
-            <span
-              className={`text-[10px] font-bold px-2.5 py-1 rounded-full ${
-                city.available
-                  ? "bg-green-100 text-green-700"
-                  : "bg-slate-100 text-slate-500"
-              }`}
-            >
-              {city.available ? "نشطة" : "قريباً"}
-            </span>
-          </div>
+          <CityRow key={city.id} city={city} />
         ))}
       </div>
     </div>
