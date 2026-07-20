@@ -5,7 +5,7 @@
 import { useState, useEffect, useRef } from "react";
 import { useUser } from "@/hooks/useUser";
 import { useUpdateProfile } from "@/hooks/useUpdateProfile";
-import { CITIES } from "@/constants";
+import { useCities } from "@/hooks/useCities";
 import { ALLOWED_PROFILE_IMAGE_TYPES } from "@/lib/profileValidation";
 
 const LockIcon = () => <span aria-hidden="true">🔒</span>;
@@ -42,6 +42,7 @@ function formatMemberSince(date: Date | null | undefined): string {
 
 export default function ProfileSection() {
   const { userData, loading } = useUser();
+  const { cities } = useCities();
   const {
     updateProfile,
     uploading,
@@ -263,7 +264,7 @@ export default function ProfileSection() {
             disabled={mode === "view"}
             className="w-full border border-slate-200 rounded-2xl px-4 py-3 disabled:bg-slate-50 focus:outline-none focus:border-[#1a3c6e]"
           >
-            {CITIES.map((c) => (
+            {cities.map((c) => (
               <option key={c.id} value={c.id} disabled={!c.available}>
                 {c.nameAr}{!c.available ? " (قريباً)" : ""}
               </option>

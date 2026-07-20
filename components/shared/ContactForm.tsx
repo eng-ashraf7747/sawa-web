@@ -3,7 +3,7 @@
 "use client";
 
 import { useContactForm } from "@/hooks/useContactForm";
-import { CITIES } from "@/constants";
+import { useCities } from "@/hooks/useCities";
 import {
   ContactMessageMethod,
   ContactMessageCategory,
@@ -22,6 +22,7 @@ const methodEntries: [ContactMessageMethod, string][] = [
 ];
 
 export default function ContactForm() {
+  const { cities } = useCities();
   const {
     senderType,
     form,
@@ -110,7 +111,7 @@ export default function ContactForm() {
               className="w-full rounded-xl border border-gray-200 px-3.5 py-2.5 text-sm outline-none focus:border-[#1a3c6e] bg-white"
             >
               <option value="">اختر المدينة</option>
-              {CITIES.map((city) => (
+              {cities.map((city) => (
                 <option key={city.id} value={city.id}>
                   {city.nameAr}
                 </option>

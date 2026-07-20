@@ -2,13 +2,6 @@
 
 import { City, Service, NavLink, TierConfig } from "@/types";
 
-export const CITIES: City[] = [
-  { id: "fayoum", name: "Fayoum", nameAr: "الفيوم", available: true },
-  { id: "cairo", name: "Cairo", nameAr: "القاهرة", available: false },
-  { id: "alex", name: "Alexandria", nameAr: "الإسكندرية", available: false },
-  { id: "minya", name: "Minya", nameAr: "المنيا", available: false },
-  { id: "assiut", name: "Assiut", nameAr: "أسيوط", available: false },
-];
 
 export const SERVICES: Service[] = [
   { id: "books", nameAr: "كتب مدرسية", icon: "📚", available: false },
