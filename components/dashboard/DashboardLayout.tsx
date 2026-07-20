@@ -13,6 +13,7 @@ import StatsBar from "./StatsBar";
 import RequestsSection from "./RequestsSection";
 import PointsSection from "./PointsSection";
 import ProfileSection from "./ProfileSection";
+import NotificationPrefsSection from "./NotificationPrefsSection";
 import CategoryGrid from "@/components/home/CategoryGrid";
 import CategoryDealsView from "./CategoryDealsView";
 import BookingCompletionModal from "./BookingCompletionModal";
@@ -207,6 +208,7 @@ function MainContent({
       <>
         {statsBar}
         <ProfileSection />
+        <NotificationPrefsSection />
       </>
     );
   }
