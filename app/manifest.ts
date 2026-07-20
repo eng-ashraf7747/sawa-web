@@ -13,13 +13,20 @@ export default function manifest(): MetadataRoute.Manifest {
     theme_color: "#1a3c6e",
     lang: "ar",
     dir: "rtl",
-    screenshots: [
+   screenshots: [
       {
         src: "/screenshot-wide.png",
         sizes: "1002x728",
         type: "image/png",
         form_factor: "wide",
       },
+      {
+        src: "/screenshot-narrow.png",
+        sizes: "713x1429",
+        type: "image/png",
+        form_factor: "narrow",
+      },
+      
     ],
     icons: [
       {
