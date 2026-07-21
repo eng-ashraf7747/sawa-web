@@ -10,6 +10,7 @@ import { signOut } from "firebase/auth";
 import { useRouter } from "next/navigation";
 import VendorHeader from "./VendorHeader";
 import VendorQuickTabs from "./VendorQuickTabs";
+import { requestNotificationPermissionAndToken, saveDeviceToken } from "@/lib/messaging";
 
 const navItems = [
   {

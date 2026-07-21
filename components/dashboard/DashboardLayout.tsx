@@ -14,6 +14,7 @@ import RequestsSection from "./RequestsSection";
 import PointsSection from "./PointsSection";
 import ProfileSection from "./ProfileSection";
 import NotificationPrefsSection from "./NotificationPrefsSection";
+import { requestNotificationPermissionAndToken, saveDeviceToken } from "@/lib/messaging";
 import CategoryGrid from "@/components/home/CategoryGrid";
 import CategoryDealsView from "./CategoryDealsView";
 import BookingCompletionModal from "./BookingCompletionModal";
@@ -263,6 +264,29 @@ export default function DashboardLayout({ initialCategoryId }: DashboardLayoutPr
     const timer = setTimeout(() => setShowReloadHint(true), 6000);
     return () => clearTimeout(timer);
   }, [loading]);
+
+  // ملاحظة معمارية (21 يوليو 2026): طلب إذن الإشعارات تلقائياً وبصمت
+  // بعد تحميل بيانات المستخدم، بدلاً من الاعتماد على صفحة اختبار يدوية.
+  // الشرط "default فقط" يمنع إزعاج المستخدم بطلب متكرر إذا سبق واتخذ
+  // قراراً (سواء بالموافقة أو الرفض) — يُطلب مرة واحدة منطقياً في
+  // حياة الحساب على هذا الجهاز تحديداً. تأخير 3 ثوانٍ لإعطاء المستخدم
+  // فرصة يرى الصفحة أولاً قبل ظهور نافذة الإذن.
+  useEffect(() => {
+    if (!userData?.uid) return;
+    if (typeof window === "undefined" || !("Notification" in window)) return;
+    if (Notification.permission !== "default") return;
+
+    const timer = setTimeout(async () => {
+      const token = await requestNotificationPermissionAndToken();
+      if (token) {
+        await saveDeviceToken(userData.uid, token).catch((err) => {
+          console.error("فشل حفظ توكن الإشعارات:", err);
+        });
+      }
+    }, 3000);
+
+    return () => clearTimeout(timer);
+  }, [userData?.uid]);
 
   if (loading) {
     return (
