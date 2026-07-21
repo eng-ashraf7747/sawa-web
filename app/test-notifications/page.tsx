@@ -5,11 +5,14 @@
 import { useState } from "react";
 import { requestNotificationPermissionAndToken, saveDeviceToken } from "@/lib/messaging";
 import { useUser } from "@/hooks/useUser";
+import { getFunctions, httpsCallable } from "firebase/functions";
+import app from "@/lib/firebase";
 
 export default function TestNotificationsPage() {
   const { userData } = useUser();
   const [token, setToken] = useState<string | null>(null);
   const [status, setStatus] = useState<string>("");
+  const [gatewayStatus, setGatewayStatus] = useState<string>("");
 
   const handleClick = async () => {
     if (!userData) {
@@ -36,9 +39,23 @@ export default function TestNotificationsPage() {
     }
   };
 
+  const handleTestGateway = async () => {
+    setGatewayStatus("جاري إرسال إشعار تجريبي عبر البوابة...");
+    try {
+      const functions = getFunctions(app);
+      const testFn = httpsCallable(functions, "testSendNotification");
+      await testFn();
+      setGatewayStatus("تم الاستدعاء بنجاح — راقب جهازك خلال ثوانٍ ✅");
+    } catch (error) {
+      console.error("خطأ في اختبار البوابة:", error);
+      setGatewayStatus("فشل الاستدعاء — راجع الكونسول (F12)");
+    }
+  };
+
   return (
     <div style={{ padding: 40, direction: "rtl", fontFamily: "sans-serif" }}>
       <h1>صفحة اختبار الإشعارات (مؤقتة)</h1>
+
       <button
         onClick={handleClick}
         style={{
@@ -63,6 +80,26 @@ export default function TestNotificationsPage() {
           {token}
         </div>
       )}
+
+      <hr style={{ margin: "30px 0" }} />
+
+      <h2>اختبار بوابة الإرسال الآمنة</h2>
+      <button
+        onClick={handleTestGateway}
+        style={{
+          padding: "12px 24px",
+          background: "#0f6e56",
+          color: "white",
+          border: "none",
+          borderRadius: 8,
+          cursor: "pointer",
+          fontSize: 16,
+        }}
+      >
+        ابعت إشعار تجريبي عبر البوابة
+      </button>
+
+      <p style={{ marginTop: 20 }}>حالة البوابة: {gatewayStatus}</p>
     </div>
   );
 }

@@ -9,3 +9,4 @@ export {onAdminApprove} from "./auth/onAdminApprove";
 export {scheduledExpiry} from "./auth/scheduledExpiry";
 export {scheduledDealExpiry} from "./deals/scheduledDealExpiry";
 export {getPointsTotals} from "./admin/getPointsTotals";
+export {testSendNotification} from "./notifications/testSendNotification";
