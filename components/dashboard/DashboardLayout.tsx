@@ -95,7 +95,6 @@ function BookingsSection() {
                 </span>
               </div>
 
-              {/* ─── بيانات المورد — لمعرفة صاحب الطلب عند تعدد الموردين ─── */}
               {booking.vendorId && booking.vendorName && (
                 <div className="flex items-center justify-between bg-gray-50 rounded-xl p-3 mb-3">
                   <p className="text-sm font-semibold text-gray-700">
@@ -238,6 +237,7 @@ export default function DashboardLayout({ initialCategoryId }: DashboardLayoutPr
   const { categories } = useActiveCategories();
   const { bookings } = useUserBookings();
   const [showReloadHint, setShowReloadHint] = useState(false);
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   const [activePage, setActivePage] = useState<ActiveSection>(initialCategoryId ? "deals" : "home");
   const [selectedCategoryId, setSelectedCategoryId] = useState<string | null>(initialCategoryId ?? null);
@@ -258,9 +258,6 @@ export default function DashboardLayout({ initialCategoryId }: DashboardLayoutPr
     setSelectedCategoryId(categoryId);
   }, []);
 
-  // شبكة أمان (16 يوليو 2026): نفس المبدأ الموثَّق في app/dashboard/page.tsx —
-  // مهلة 6 ثوانٍ قبل عرض خيار إعادة تحميل يدوي، بدون أي تأثير على المسار
-  // الناجح (المؤقّت يُلغى فور اكتمال التحميل بنجاح).
   useEffect(() => {
     if (!loading) return;
     const timer = setTimeout(() => setShowReloadHint(true), 6000);
@@ -292,9 +289,15 @@ export default function DashboardLayout({ initialCategoryId }: DashboardLayoutPr
         userData={userData}
         activePage={activePage}
         onNavigate={handleNavigate}
+        isMobileOpen={mobileMenuOpen}
+        onMobileClose={() => setMobileMenuOpen(false)}
       />
       <div className="flex-1 flex flex-col min-h-screen overflow-hidden">
-        <DashboardHeader userData={userData} activePage={activePage} />
+        <DashboardHeader
+          userData={userData}
+          activePage={activePage}
+          onMenuClick={() => setMobileMenuOpen(true)}
+        />
         <main className="flex-1 p-4 md:p-8 flex flex-col gap-6 pb-24 md:pb-8">
           <MainContent
             activeSection={activePage}

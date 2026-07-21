@@ -14,6 +14,8 @@ interface SidebarProps {
   userData: User | null;
   activePage: string;
   onNavigate: (page: string) => void;
+  isMobileOpen: boolean;
+  onMobileClose: () => void;
 }
 
 const NavItem = memo(function NavItem({
@@ -52,6 +54,8 @@ export default function Sidebar({
   userData,
   activePage,
   onNavigate,
+  isMobileOpen,
+  onMobileClose,
 }: SidebarProps) {
   const router = useRouter();
   const [servicesOpen, setServicesOpen] = useState(true);
@@ -69,13 +73,13 @@ export default function Sidebar({
     router.push("/");
   };
 
-  return (
-    <aside
-      className="hidden md:flex w-[260px] min-h-screen flex-col"
-      style={{ background: "linear-gradient(180deg, #1a3c6e 0%, #0f2447 100%)" }}
-      role="navigation"
-      aria-label="القائمة الجانبية"
-    >
+  // ملاحظة معمارية (20 يوليو 2026): نفس عنصر النقل يُستدعى مرة واحدة
+  // بمنطقه الكامل، ويُعرَض مرتين فقط عبر تغيير الحاوية الخارجية —
+  // مرة كشريط ثابت لسطح المكتب (aside عادي)، ومرة كـ overlay كامل
+  // الشاشة على الموبايل (يظهر فقط عند isMobileOpen). هذا يمنع ازدواجية
+  // منطق التنقل نفسه في مكانين، ويقتصر الفرق على "كيف يُعرَض الحاوي".
+  const navigationContent = (
+    <>
       {/* Logo */}
       <div className="flex justify-center items-center py-6 border-b border-white/10">
         <div className="w-12 h-12 rounded-full bg-white flex items-center justify-center shadow-lg">
@@ -126,13 +130,13 @@ export default function Sidebar({
       </div>
 
       {/* Navigation */}
-      <nav className="flex-1 px-3 py-4 flex flex-col gap-1">
+      <nav className="flex-1 px-3 py-4 flex flex-col gap-1 overflow-y-auto">
         <NavItem
           id="home"
           icon="🏠"
           label="الرئيسية"
           isActive={activePage === "home"}
-          onClick={() => onNavigate("home")}
+          onClick={() => { onNavigate("home"); onMobileClose(); }}
         />
 
         {/* Services Section */}
@@ -150,9 +154,9 @@ export default function Sidebar({
 
         {servicesOpen && (
           <div className="flex flex-col gap-0.5">
-            <NavItem id="deals" label="العروض المتاحة" isActive={activePage === "deals"} isChild onClick={() => onNavigate("deals")} />
-            <NavItem id="requests" label="الخدمات المطلوبة" isActive={activePage === "requests"} isChild onClick={() => onNavigate("requests")} />
-            <NavItem id="bookings" label="حجوزاتي" isActive={activePage === "bookings"} isChild onClick={() => onNavigate("bookings")} />
+            <NavItem id="deals" label="العروض المتاحة" isActive={activePage === "deals"} isChild onClick={() => { onNavigate("deals"); onMobileClose(); }} />
+            <NavItem id="requests" label="الخدمات المطلوبة" isActive={activePage === "requests"} isChild onClick={() => { onNavigate("requests"); onMobileClose(); }} />
+            <NavItem id="bookings" label="حجوزاتي" isActive={activePage === "bookings"} isChild onClick={() => { onNavigate("bookings"); onMobileClose(); }} />
           </div>
         )}
 
@@ -171,13 +175,13 @@ export default function Sidebar({
 
         {accountOpen && (
           <div className="flex flex-col gap-0.5">
-            <NavItem id="profile" label="بياناتي" isActive={activePage === "profile"} isChild onClick={() => onNavigate("profile")} />
-            <NavItem id="points" label="سجل نقاطي" isActive={activePage === "points"} isChild onClick={() => onNavigate("points")} />
+            <NavItem id="profile" label="بياناتي" isActive={activePage === "profile"} isChild onClick={() => { onNavigate("profile"); onMobileClose(); }} />
+            <NavItem id="points" label="سجل نقاطي" isActive={activePage === "points"} isChild onClick={() => { onNavigate("points"); onMobileClose(); }} />
 
-            <Link href="/contact" className="w-full flex items-center gap-3 px-4 py-2.5 rounded-xl text-white/70 hover:bg-white/10 hover:text-white transition-all pr-10 py-2">
+            <Link href="/contact" onClick={onMobileClose} className="w-full flex items-center gap-3 px-4 py-2.5 rounded-xl text-white/70 hover:bg-white/10 hover:text-white transition-all pr-10 py-2">
               💬 تواصل معنا
             </Link>
-            <Link href="/legal/terms" className="w-full flex items-center gap-3 px-4 py-2.5 rounded-xl text-white/70 hover:bg-white/10 hover:text-white transition-all pr-10 py-2">
+            <Link href="/legal/terms" onClick={onMobileClose} className="w-full flex items-center gap-3 px-4 py-2.5 rounded-xl text-white/70 hover:bg-white/10 hover:text-white transition-all pr-10 py-2">
               📄 شروط الاستخدام
             </Link>
           </div>
@@ -195,6 +199,46 @@ export default function Sidebar({
           <span className="text-sm">تسجيل الخروج</span>
         </button>
       </div>
-    </aside>
+    </>
+  );
+
+  return (
+    <>
+      {/* سطح المكتب — شريط ثابت دائم الظهور، بلا تغيير عن السابق */}
+      <aside
+        className="hidden md:flex w-[260px] min-h-screen flex-col"
+        style={{ background: "linear-gradient(180deg, #1a3c6e 0%, #0f2447 100%)" }}
+        role="navigation"
+        aria-label="القائمة الجانبية"
+      >
+        {navigationContent}
+      </aside>
+
+      {/* الموبايل — Overlay كامل الشاشة، يظهر فقط عند فتحه من زرار الهمبرجر */}
+      {isMobileOpen && (
+        <div className="md:hidden fixed inset-0 z-40 flex">
+          <div
+            className="absolute inset-0 bg-black/50"
+            onClick={onMobileClose}
+            aria-hidden="true"
+          />
+          <aside
+            className="relative w-[280px] max-w-[80vw] h-full flex flex-col overflow-y-auto"
+            style={{ background: "linear-gradient(180deg, #1a3c6e 0%, #0f2447 100%)" }}
+            role="navigation"
+            aria-label="القائمة الجانبية"
+          >
+            <button
+              onClick={onMobileClose}
+              className="absolute top-4 left-4 w-8 h-8 flex items-center justify-center rounded-full bg-white/10 text-white"
+              aria-label="إغلاق القائمة"
+            >
+              ✕
+            </button>
+            {navigationContent}
+          </aside>
+        </div>
+      )}
+    </>
   );
 }
