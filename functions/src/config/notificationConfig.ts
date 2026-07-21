@@ -5,6 +5,8 @@ export const COLLECTIONS = {
   DEVICE_TOKENS: "deviceTokens",
   NOTIFICATION_COUNTERS: "notificationCounters",
   NOTIFICATION_REJECTIONS: "notificationRejections",
+  BOOKINGS: "bookings",
+  REQUESTS: "requests",
 };
 
 // ─── سقوف الإرسال الآمن (20 يوليو 2026) ─────────────────────

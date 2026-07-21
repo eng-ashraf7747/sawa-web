@@ -10,3 +10,6 @@ export {scheduledExpiry} from "./auth/scheduledExpiry";
 export {scheduledDealExpiry} from "./deals/scheduledDealExpiry";
 export {getPointsTotals} from "./admin/getPointsTotals";
 export {testSendNotification} from "./notifications/testSendNotification";
+export {onBookingCreated} from "./notifications/onBookingCreated";
+export {onBookingDelivered} from "./notifications/onBookingDelivered";
+export {onRequestFulfilled} from "./notifications/onRequestFulfilled";
