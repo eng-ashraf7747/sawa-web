@@ -15,6 +15,7 @@ import PointsSection from "./PointsSection";
 import ProfileSection from "./ProfileSection";
 import NotificationPrefsSection from "./NotificationPrefsSection";
 import { requestNotificationPermissionAndToken, saveDeviceToken } from "@/lib/messaging";
+import ForegroundNotificationToast from "@/components/shared/ForegroundNotificationToast";
 import CategoryGrid from "@/components/home/CategoryGrid";
 import CategoryDealsView from "./CategoryDealsView";
 import BookingCompletionModal from "./BookingCompletionModal";
@@ -308,7 +309,9 @@ export default function DashboardLayout({ initialCategoryId }: DashboardLayoutPr
   }
 
   return (
-    <div className="min-h-screen flex flex-row bg-[#f0f4f8]" dir="rtl">
+    <>
+      <ForegroundNotificationToast />
+      <div className="min-h-screen flex flex-row bg-[#f0f4f8]" dir="rtl">
       <Sidebar
         userData={userData}
         activePage={activePage}
@@ -336,5 +339,7 @@ export default function DashboardLayout({ initialCategoryId }: DashboardLayoutPr
         </main>
       </div>
     </div>
+    </>
+
   );
 }

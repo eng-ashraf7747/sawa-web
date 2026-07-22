@@ -11,6 +11,7 @@ import { useRouter } from "next/navigation";
 import VendorHeader from "./VendorHeader";
 import VendorQuickTabs from "./VendorQuickTabs";
 import { requestNotificationPermissionAndToken, saveDeviceToken } from "@/lib/messaging";
+import ForegroundNotificationToast from "@/components/shared/ForegroundNotificationToast";
 
 const navItems = [
   {
@@ -111,6 +112,28 @@ export default function VendorLayout({ children, title }: VendorLayoutProps) {
     document.addEventListener("mousedown", handleClickOutside);
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
+
+  
+
+    // ملاحظة معمارية (21 يوليو 2026): نفس منطق الطلب التلقائي لإذن
+  // الإشعارات المطبَّق في DashboardLayout.tsx بالحرف — الحارس المزدوج
+  // (default فقط + دعم المتصفح)، التأخير 3 ثوانٍ، ومعالجة فشل الحفظ
+  // بتسجيل الخطأ بدلاً من الفشل الصامت.
+  useEffect(() => {
+    if (!userData?.uid) return;
+    if (typeof window === "undefined" || !("Notification" in window)) return;
+    if (Notification.permission !== "default") return;
+    const timer = setTimeout(async () => {
+      const token = await requestNotificationPermissionAndToken();
+      if (token) {
+        await saveDeviceToken(userData.uid, token).catch((err) => {
+          console.error("فشل حفظ توكن الإشعارات:", err);
+        });
+      }
+    }, 3000);
+    return () => clearTimeout(timer);
+  }, [userData?.uid]);
+
 
   const handleLogout = async () => {
     setLoggingOut(true);
@@ -268,7 +291,9 @@ export default function VendorLayout({ children, title }: VendorLayoutProps) {
   );
 
   return (
-    <div className="min-h-screen bg-[#f8fafc] flex" dir="rtl">
+    <>
+      <ForegroundNotificationToast />
+      <div className="min-h-screen bg-[#f8fafc] flex" dir="rtl">
       {/* سطح المكتب — شريط ثابت قابل للطي */}
       <aside className={`
         hidden md:flex fixed top-0 right-0 h-full bg-[#1e293b] text-white z-30
@@ -313,5 +338,7 @@ export default function VendorLayout({ children, title }: VendorLayoutProps) {
         </main>
       </div>
     </div>
+        </>
+
   );
 }

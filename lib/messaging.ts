@@ -1,6 +1,6 @@
 // lib/messaging.ts
 
-import { getMessaging, getToken, isSupported } from "firebase/messaging";
+import { getMessaging, getToken, isSupported, onMessage, type MessagePayload } from "firebase/messaging";
 import { doc, setDoc, serverTimestamp } from "firebase/firestore";
 import app, { db } from "./firebase";
 
@@ -42,4 +42,14 @@ export async function saveDeviceToken(uid: string, token: string): Promise<void>
     createdAt: serverTimestamp(),
     platform: typeof navigator !== "undefined" ? navigator.userAgent : "unknown",
   });
+}
+// ─── الاستماع لرسائل الإشعارات وقت فتح الصفحة فعلياً (Foreground) ───────
+export async function listenForForegroundMessages(
+  callback: (payload: MessagePayload) => void
+): Promise<() => void> {
+  const supported = await isSupported();
+  if (!supported) return () => {};
+
+  const messaging = getMessaging(app);
+  return onMessage(messaging, callback);
 }
