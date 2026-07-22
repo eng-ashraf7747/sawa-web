@@ -48,8 +48,12 @@ export async function listenForForegroundMessages(
   callback: (payload: MessagePayload) => void
 ): Promise<() => void> {
   const supported = await isSupported();
-  if (!supported) return () => {};
+  if (!supported) {
+    console.log("🔴 DEBUG: المتصفح مش داعم Foreground Messages");
+    return () => {};
+  }
 
   const messaging = getMessaging(app);
+  console.log("🟢 DEBUG: تم تسجيل مستمع onMessage بنجاح");
   return onMessage(messaging, callback);
 }

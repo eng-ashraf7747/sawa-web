@@ -17,6 +17,7 @@ export default function ForegroundNotificationToast() {
     let hideTimer: ReturnType<typeof setTimeout> | undefined;
 
     listenForForegroundMessages((payload) => {
+      console.log("🟡 DEBUG: وصلت رسالة Foreground:", payload);
       setToast({
         title: payload.notification?.title ?? "إشعار جديد",
         body: payload.notification?.body ?? "",
